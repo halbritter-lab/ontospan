@@ -139,8 +139,8 @@ def test_resources_name_the_release_of_the_layer(hp: ObographOntology) -> None:
         update={"ontology": OntologyResource(id="hp", version="2025-01-01")}
     )
     data = unit([annotation("a1", SEIZURE, [(63, 76)])], layers=[older])
-    packet, _ = to_phenopacket(data, hp, created_at=CREATED)
-    assert [r["version"] for r in packet["metaData"]["resources"]] == ["2025-01-01"]
+    with pytest.raises(ValueError, match="ontology release"):
+        to_phenopacket(data, hp, created_at=CREATED)
 
 
 def test_the_creation_time_needs_a_time_zone(
@@ -163,7 +163,9 @@ def test_documents_of_one_subject_form_one_packet(hp: ObographOntology) -> None:
             set_id="set-3",
         ),
     ]
-    grouped = to_phenopackets(units, hp, created_at=CREATED, bundle_id="b-1")
+    grouped = to_phenopackets(
+        units, hp, created_at=CREATED, bundle_id="b-1", group_by_subject=True
+    )
     assert [packet["id"] for packet, _ in grouped] == ["P1", "d2"]
     first, report = grouped[0]
     assert first["subject"] == {"id": "P1"}
@@ -177,6 +179,43 @@ def test_documents_of_one_subject_form_one_packet(hp: ObographOntology) -> None:
 
     single = to_phenopackets(units, hp, created_at=CREATED, group_by_subject=False)
     assert [packet["id"] for packet, _ in single] == ["d1", "d2", "d3"]
+
+
+def test_many_packet_export_defaults_to_separate_documents(
+    hp: ObographOntology,
+) -> None:
+    units = [
+        unit([], document_id="d1", subject_id="P1"),
+        unit([], document_id="d2", subject_id="P1", set_id="s2"),
+    ]
+    assert [packet["id"] for packet, _ in to_phenopackets(units, hp)] == ["d1", "d2"]
+
+
+def test_alternate_annotation_sets_are_never_mixed(hp: ObographOntology) -> None:
+    units = [
+        unit([], set_id="set:A", subject_id="P"),
+        unit([], set_id="set:B", subject_id="P"),
+    ]
+    with pytest.raises(ValueError, match="one annotation set per document"):
+        to_phenopackets(units, hp, group_by_subject=True)
+    assert [p["id"] for p, _ in to_phenopackets(units, hp)] == [
+        "urn:ontospan:document:doc-1:set%3AA",
+        "urn:ontospan:document:doc-1:set%3AB",
+    ]
+
+
+def test_grouped_hpo_resources_cannot_use_conflicting_releases(
+    hp: ObographOntology,
+) -> None:
+    older = HPO_LAYER.model_copy(
+        update={"ontology": OntologyResource(id="hp", version="2025-01-01")}
+    )
+    units = [
+        unit([], document_id="d1", subject_id="P"),
+        unit([], document_id="d2", subject_id="P", set_id="s2", layers=[older]),
+    ]
+    with pytest.raises(ValueError, match="conflicting HPO releases"):
+        to_phenopackets(units, hp, group_by_subject=True)
 
 
 def test_parsing_checks_the_structure_only(

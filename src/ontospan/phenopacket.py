@@ -8,10 +8,12 @@ the structure only, not the content.
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass, fields
 from datetime import UTC, datetime
 from typing import Any
+from urllib.parse import quote
 
 from ontospan._version import __version__
 from ontospan.models import AnnotatedDocument, Annotation
@@ -133,7 +135,9 @@ def _features(
     return features
 
 
-def _resources(units: Sequence[AnnotatedDocument]) -> list[dict[str, str]]:
+def _resources(
+    units: Sequence[AnnotatedDocument], ontology: OntologyView
+) -> list[dict[str, str]]:
     versions = sorted(
         {
             layer.ontology.version
@@ -142,6 +146,12 @@ def _resources(units: Sequence[AnnotatedDocument]) -> list[dict[str, str]]:
             if layer.profile == hpo.NAME
         }
     )
+    if len(versions) > 1:
+        raise ValueError("conflicting HPO releases in one Phenopacket")
+    if versions and ontology.release is not None and versions[0] != ontology.release:
+        raise ValueError(
+            f"ontology release {ontology.release!r} does not match layer release {versions[0]!r}"
+        )
     return [
         {
             "id": "hp",
@@ -172,6 +182,7 @@ def _packet(
     bundle_id: str | None,
     created: str,
 ) -> tuple[dict[str, Any], ExportReport]:
+    resources = _resources(units, ontology)
     report = ExportReport()
     features = [
         feature
@@ -185,7 +196,7 @@ def _packet(
     packet["metaData"] = {
         "created": created,
         "createdBy": f"ontospan {__version__}",
-        "resources": _resources(units),
+        "resources": resources,
         "phenopacketSchemaVersion": "2.0",
     }
     return packet, report
@@ -217,7 +228,7 @@ def to_phenopackets(
     units: Sequence[AnnotatedDocument],
     ontology: OntologyView,
     *,
-    group_by_subject: bool = True,
+    group_by_subject: bool = False,
     include_uncertain: bool = False,
     bundle_id: str | None = None,
     created_at: datetime | None = None,
@@ -241,11 +252,29 @@ def to_phenopackets(
             subjects[key] = subject
         groups[key].append(unit)
     packets = []
+    document_counts = Counter(unit.document.document_id for unit in units)
+    used_packet_ids: set[str] = set()
     for key, members in groups.items():
+        if group_by_subject and len({u.document.document_id for u in members}) != len(
+            members
+        ):
+            raise ValueError("select one annotation set per document before grouping")
         subject = subjects[key]
         packet_id = (
             subject if group_by_subject and subject else members[0].document.document_id
         )
+        if (
+            not (group_by_subject and subject)
+            and document_counts[members[0].document.document_id] > 1
+        ):
+            document_id = quote(members[0].document.document_id, safe="")
+            set_id = quote(members[0].annotation_set.annotation_set_id, safe="")
+            packet_id = f"urn:ontospan:document:{document_id}:{set_id}"
+        if packet_id in used_packet_ids:
+            raise ValueError(
+                f"duplicate Phenopacket id {packet_id!r}; select distinct document and set identities"
+            )
+        used_packet_ids.add(packet_id)
         packets.append(
             _packet(
                 packet_id,

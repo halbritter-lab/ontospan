@@ -7,10 +7,12 @@ exports add the bundle id.
 
 from __future__ import annotations
 
+import re
 from typing import NamedTuple
 from urllib.parse import quote, unquote
 
 PREFIX = "urn:ontospan:"
+_COMPONENT = re.compile(r"(?:[A-Za-z0-9._~-]|%[0-9A-Fa-f]{2})+")
 
 
 class AnnotationRef(NamedTuple):
@@ -32,7 +34,10 @@ def parse_annotation_ref(ref: str) -> AnnotationRef:
     """The parts of a reference; ``ValueError`` if it is not one."""
     if not ref.startswith(PREFIX):
         raise ValueError(f"{ref!r} does not start with {PREFIX!r}")
-    parts = [unquote(part) for part in ref[len(PREFIX) :].split(":")]
+    encoded = ref[len(PREFIX) :].split(":")
+    if any(_COMPONENT.fullmatch(part) is None for part in encoded):
+        raise ValueError(f"{ref!r} has an invalid encoded component")
+    parts = [unquote(part, errors="strict") for part in encoded]
     if len(parts) not in (2, 3) or not all(parts):
         raise ValueError(f"{ref!r} needs a set id and an annotation id")
     if len(parts) == 3:

@@ -71,6 +71,9 @@ class Agreement:
     mentions_b: int
     mentions_equal: int
     mentions_compatible: int
+    terms_a: int
+    terms_b: int
+    terms_equal: int
 
 
 def mention_key(mention: Mention, text: str) -> MentionKey:
@@ -373,4 +376,7 @@ def agreement(
         mentions_b=mentions_b,
         mentions_equal=mentions_equal,
         mentions_compatible=mentions_compatible,
+        terms_a=len(terms_a),
+        terms_b=len(terms_b),
+        terms_equal=len(terms_a & terms_b),
     )

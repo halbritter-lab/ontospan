@@ -21,7 +21,7 @@ CURIE = r"^[A-Za-z][A-Za-z0-9_.]*:\S+$"
 SHA256 = r"^[0-9a-f]{64}$"
 LANGUAGE = r"^[a-z]{2,3}(-[A-Za-z0-9]+)*$"
 ORCID = r"^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$"
-VERSION = r"^\d+\.\d+\.\d+$"
+VERSION = r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$"
 
 Basis = Literal["chosen", "defaulted"]
 ActorKind = Literal["human", "tool"]

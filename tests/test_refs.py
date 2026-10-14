@@ -3,6 +3,17 @@ import pytest
 from ontospan.refs import AnnotationRef, annotation_ref, parse_annotation_ref
 
 
+@pytest.mark.parametrize("part", ["%FF", "%ZZ", "%", "%A", "%C3%28"])
+def test_invalid_encoded_reference_components_are_refused(part: str) -> None:
+    with pytest.raises(ValueError):
+        parse_annotation_ref(f"urn:ontospan:set:{part}")
+
+
+def test_unicode_reference_components_round_trip_without_loss() -> None:
+    ref = annotation_ref("sét:患者", "a%1")
+    assert parse_annotation_ref(ref) == AnnotationRef("sét:患者", "a%1")
+
+
 def test_a_reference_names_set_and_annotation_and_encodes_colons() -> None:
     ref = annotation_ref("e3c:EN1:ann-01", "a1")
     assert ref == "urn:ontospan:e3c%3AEN1%3Aann-01:a1"

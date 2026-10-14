@@ -14,9 +14,19 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from builders import SEIZURE, SEVERE, TEXT, annotation, axes, sample, unit
+from builders import (
+    CREATED,
+    HPO_LAYER,
+    SEIZURE,
+    SEVERE,
+    TEXT,
+    annotation,
+    axes,
+    sample,
+    unit,
+)
 
-from ontospan.models import AxisValue, Layer, OntologyResource
+from ontospan.models import AxisValue, FileEntry, Layer, Manifest, OntologyResource
 
 ROOT = Path(__file__).resolve().parent.parent / "conformance"
 CHECKED = ["hierarchy_not_checked"]
@@ -95,8 +105,58 @@ def _source_ref() -> Data:
     return _dump(unit([item]))
 
 
+def _manifest_missing_version() -> Data:
+    data = _dump(
+        Manifest(
+            bundle_id="b",
+            created_at=CREATED,
+            layers=(HPO_LAYER,),
+            files=(FileEntry(path="documents/0.json", sha256="0" * 64),),
+        )
+    )
+    del data["schema_version"]
+    return data
+
+
+def _manifest_missing_artifact_type() -> Data:
+    data = _manifest_missing_version()
+    data["schema_version"] = "1.0.0"
+    del data["artifact_type"]
+    return data
+
+
 # name -> (builder, errors, warnings, valid under the hpo profile schema or None)
 CASES: dict[str, tuple[Callable[[], Data], list[str], list[str], bool | None]] = {
+    "invalid/document-missing-artifact-type": (
+        _changed(lambda d: d.pop("artifact_type")),
+        ["schema"],
+        [],
+        None,
+    ),
+    "invalid/manifest-missing-artifact-type": (
+        _manifest_missing_artifact_type,
+        ["schema"],
+        [],
+        None,
+    ),
+    "invalid/unicode-surrogate": (
+        _changed(lambda d: d["document"].update(text="\ud800")),
+        ["invalid_unicode"],
+        [],
+        None,
+    ),
+    "invalid/document-missing-schema-version": (
+        _changed(lambda d: d.pop("schema_version")),
+        ["schema_version"],
+        [],
+        None,
+    ),
+    "invalid/manifest-missing-schema-version": (
+        _manifest_missing_version,
+        ["schema_version"],
+        [],
+        None,
+    ),
     "valid/sample": (_sample, [], CHECKED, True),
     "valid/discontinuous-mention": (_discontinuous, [], CHECKED, True),
     "valid/document-level": (_document_level, [], CHECKED, True),
@@ -185,7 +245,12 @@ CASES: dict[str, tuple[Callable[[], Data], list[str], list[str], bool | None]] =
 
 
 def render(data: Any) -> str:
-    return json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    rendered = json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    try:
+        rendered.encode("utf-8")
+    except UnicodeEncodeError:
+        return json.dumps(data, ensure_ascii=True, indent=2, sort_keys=True) + "\n"
+    return rendered
 
 
 def expected() -> Data:
@@ -194,6 +259,9 @@ def expected() -> Data:
         "cases": [
             {
                 "file": f"{name}.json",
+                "artifact_type": "bundle"
+                if name.startswith("invalid/manifest-")
+                else "annotated_document",
                 "errors": errors,
                 "warnings": warnings,
                 "hpo_profile_schema": profile,

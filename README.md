@@ -24,6 +24,33 @@ packet, export_report = to_phenopacket(unit, hp)
 Offsets are Unicode codepoints of the canonical text. In JavaScript, convert
 from UTF-16 indices before writing.
 
+To collect loader warnings, pass a `ValidationReport` as the optional
+`report=` sink to `load_annotated_document()` or `read_bundle()`. Their return
+values stay unchanged. For example:
+
+```python
+from ontospan import ValidationReport, read_bundle
+
+warnings = ValidationReport()
+manifest, units = read_bundle(bundle_path, {"hp": hp}, report=warnings)
+for issue in warnings.warnings:
+    print(issue.code, issue.path, issue.message)
+```
+
+Bundle unit issues include the document file path. This preserves warnings
+about newer minor versions, unknown profiles, ontology release mismatches,
+cohort frequency and unchecked ontology rules. Errors raise `FormatError`
+and are also appended to the supplied report.
+
+`to_phenopackets()` defaults to one packet per annotated document. When
+alternative sets share a document ID, packet IDs include the percent-encoded
+document and annotation-set identities. Unambiguous document IDs are retained.
+To combine documents by subject, set `group_by_subject=True` and select one
+annotation set per document first, for example the adjudicated or release set.
+Grouping rejects alternate sets of the same document. Exports reject conflicting
+HPO releases in one packet and a supplied ontology whose release differs from
+the layer release, rather than emitting ambiguous resources or foreign labels.
+
 ## Binding contract
 
 The contract has three parts:
@@ -39,6 +66,13 @@ The contract has three parts:
 
 Regenerate the schemas with `uv run python -m ontospan.schema_export` and the
 fixtures with `uv run python tests/conformance_cases.py`.
+
+Serialized documents and manifests require explicit `schema_version` and
+`artifact_type`, although Python constructors provide defaults. Versions use
+ASCII SemVer numbers without leading zeros. Readers reject duplicate JSON keys
+(`duplicate_json_key`) and invalid Unicode scalar values (`invalid_unicode`).
+Malformed ZIP structure or compressed data produces `invalid_archive`;
+filesystem failures such as a missing input file retain their normal exceptions.
 
 ### Rules that JSON Schema cannot express
 
@@ -71,6 +105,9 @@ An annotation is referenced as `urn:ontospan:<annotation_set_id>:<annotation_id>
 Exports prefix the bundle: `urn:ontospan:<bundle_id>:<annotation_set_id>:<annotation_id>`.
 Every part is percent-encoded, so ids may contain `:`. `source_refs` use the
 same syntax.
+Percent escapes must decode as strict UTF-8. Hexadecimal case does not change
+their meaning. Source references may point to external annotation sets;
+loaders check syntax without requiring those targets to be locally available.
 
 ## Versions
 

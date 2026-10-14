@@ -44,6 +44,12 @@ def _model_schema(
     model: type[AnnotatedDocument] | type[Manifest], name: str
 ) -> dict[str, Any]:
     schema: dict[str, Any] = _close(model.model_json_schema())
+    # Constructors default the version; serialized artifacts must declare it.
+    schema["required"] = [
+        "schema_version",
+        "artifact_type",
+        *schema.get("required", []),
+    ]
     return {**_header(name), **schema}
 
 

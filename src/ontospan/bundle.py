@@ -8,8 +8,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+import lzma
 import zipfile
+import zlib
 from collections.abc import Mapping, Sequence
+from contextlib import suppress
 from datetime import datetime
 from pathlib import Path, PurePosixPath
 
@@ -21,9 +24,11 @@ from ontospan.report import FormatError, ValidationReport
 from ontospan.schema import MANIFEST as MANIFEST_KIND
 from ontospan.validate import (
     check_schema,
+    check_unicode,
     check_version,
     dump_json,
     load_annotated_document,
+    parse_json,
     validate,
 )
 
@@ -90,6 +95,10 @@ def write_bundle(
         for index, unit in enumerate(units)
     }
     manifest = Manifest(
+        schema_version=max(
+            (unit.schema_version for unit in units),
+            key=lambda v: tuple(int(part) for part in v.split(".")),
+        ),
         bundle_id=bundle_id,
         release_name=release_name,
         created_at=created_at,
@@ -101,6 +110,7 @@ def write_bundle(
         ),
     )
     payload = {MANIFEST: dump_json(manifest), **files}
+    _read_manifest(payload, report)
     if target.suffix == ".zip":
         with zipfile.ZipFile(target, "x", compression=zipfile.ZIP_DEFLATED) as archive:
             for path, data in payload.items():
@@ -153,12 +163,15 @@ def _read_manifest(contents: Mapping[str, bytes], report: ValidationReport) -> M
         report.add("error", "missing_manifest", MANIFEST, "bundle has no manifest.json")
         raise FormatError(report)
     try:
-        data = json.loads(contents[MANIFEST])
-    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-        report.add("error", "invalid_json", MANIFEST, str(exc))
+        data = parse_json(contents[MANIFEST])
+    except FormatError as exc:
+        report.issues.extend(exc.report.issues)
         raise FormatError(report) from exc
     if not isinstance(data, dict):
         report.add("error", "not_an_object", MANIFEST, "the manifest is an object")
+        raise FormatError(report)
+    check_unicode(data, report)
+    if not report.ok:
         raise FormatError(report)
     version = check_version(data.get("schema_version"), report)
     if version is not None:
@@ -166,10 +179,27 @@ def _read_manifest(contents: Mapping[str, bytes], report: ValidationReport) -> M
     if not report.ok:
         raise FormatError(report)
     try:
-        return Manifest.model_validate(data)
+        manifest = (
+            Manifest.model_validate_json(json.dumps(data), strict=True)
+            if version is not None and version.newer
+            else Manifest.model_validate(data)
+        )
     except ValidationError as exc:
         report.add("error", "model", MANIFEST, str(exc))
         raise FormatError(report) from exc
+    seen_layers: set[str] = set()
+    for index, layer in enumerate(manifest.layers):
+        if layer.layer_id in seen_layers:
+            report.add(
+                "error",
+                "duplicate_layer",
+                f"manifest.layers[{index}]",
+                f"layer {layer.layer_id!r} is declared twice",
+            )
+        seen_layers.add(layer.layer_id)
+    if not report.ok:
+        raise FormatError(report)
+    return manifest
 
 
 def _check_hash(path: str, data: bytes, sha: str, report: ValidationReport) -> bool:
@@ -183,15 +213,32 @@ def _check_hash(path: str, data: bytes, sha: str, report: ValidationReport) -> b
     return False
 
 
-def read_bundle(
-    source: Path, ontologies: Mapping[str, OntologyView] | None = None
+def _load_bundle(
+    source: Path,
+    ontologies: Mapping[str, OntologyView] | None,
+    report: ValidationReport,
 ) -> tuple[Manifest, list[AnnotatedDocument]]:
     """Read and verify a bundle; raises ``FormatError`` with every problem found."""
-    report = ValidationReport()
     if source.is_dir():
         contents = _read_directory(source, report)
     else:
-        contents = _read_zip(source, report)
+        try:
+            contents = _read_zip(source, report)
+        except (
+            zipfile.BadZipFile,
+            zlib.error,
+            lzma.LZMAError,
+            EOFError,
+            RuntimeError,
+            NotImplementedError,
+        ) as exc:
+            report.add(
+                "error",
+                "invalid_archive",
+                str(source),
+                f"cannot decode ZIP archive: {exc}",
+            )
+            raise FormatError(report) from exc
     for name in contents:
         pure = PurePosixPath(name)
         if pure.is_absolute() or ".." in pure.parts or "\\" in name:
@@ -212,13 +259,17 @@ def read_bundle(
         if path not in contents:
             report.add("error", "missing_file", path, "listed file is missing")
         elif _check_hash(path, contents[path], sha, report):
-            try:
-                units.append(load_annotated_document(contents[path], ontologies))
-            except FormatError as exc:
-                for issue in exc.report.errors:
-                    report.add(
-                        "error", issue.code, f"{path}:{issue.path}", issue.message
+            unit_report = ValidationReport()
+            with suppress(FormatError):
+                units.append(
+                    load_annotated_document(
+                        contents[path], ontologies, report=unit_report
                     )
+                )
+            for issue in unit_report.issues:
+                report.add(
+                    issue.level, issue.code, f"{path}:{issue.path}", issue.message
+                )
     _duplicate_sets(units, report)
     layers = _layers(units, report)
     if report.ok and layers != {layer.layer_id: layer for layer in manifest.layers}:
@@ -227,3 +278,18 @@ def read_bundle(
     if not report.ok:
         raise FormatError(report)
     return manifest, units
+
+
+def read_bundle(
+    source: Path,
+    ontologies: Mapping[str, OntologyView] | None = None,
+    *,
+    report: ValidationReport | None = None,
+) -> tuple[Manifest, list[AnnotatedDocument]]:
+    """Read a bundle; optionally collect every warning and error in ``report``."""
+    checked = ValidationReport()
+    try:
+        return _load_bundle(source, ontologies, checked)
+    finally:
+        if report is not None:
+            report.issues.extend(checked.issues)

@@ -14,7 +14,7 @@ import jsonschema
 from pydantic import BaseModel, ValidationError
 
 from ontospan._version import SCHEMA_VERSION
-from ontospan.models import Actor, AnnotatedDocument, Layer, Segment
+from ontospan.models import VERSION, Actor, AnnotatedDocument, Layer, Segment
 from ontospan.ontology import OntologyView
 from ontospan.profiles import HIERARCHICAL_PROFILES, PROFILES, Context
 from ontospan.refs import parse_annotation_ref
@@ -62,12 +62,50 @@ def _path(parts: Iterable[Any]) -> str:
     return ".".join(str(part) for part in parts) or "$"
 
 
+def check_unicode(data: object, report: ValidationReport, path: str = "$") -> None:
+    """Reject lone surrogates in every string, including unknown fields and keys."""
+    if isinstance(data, str):
+        try:
+            data.encode("utf-8")
+        except UnicodeEncodeError:
+            report.add(
+                "error",
+                "invalid_unicode",
+                path,
+                "strings must contain valid Unicode scalar values",
+            )
+    elif isinstance(data, Mapping):
+        for key, value in data.items():
+            check_unicode(key, report, f"{path}.<key>")
+            check_unicode(value, report, f"{path}.{key!s}")
+    elif isinstance(data, list | tuple):
+        for index, value in enumerate(data):
+            check_unicode(value, report, f"{path}[{index}]")
+
+
+def parse_json(data: bytes | str) -> Any:
+    """Read JSON without silently choosing between duplicate object keys."""
+
+    def unique(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in out:
+                raise fail("duplicate_json_key", "$", f"duplicate JSON key {key!r}")
+            out[key] = value
+        return out
+
+    try:
+        return json.loads(data, object_pairs_hook=unique)
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise fail("invalid_json", "$", str(exc)) from exc
+
+
 def check_version(value: object, report: ValidationReport) -> Version | None:
     """Record version problems; None if the data must not be read at all."""
-    parts = value.split(".") if isinstance(value, str) else []
-    if len(parts) != 3 or not all(part.isdigit() for part in parts):
+    if not isinstance(value, str) or re.fullmatch(VERSION, value) is None:
         report.add("error", "schema_version", "schema_version", f"invalid {value!r}")
         return None
+    parts = value.split(".")
     version = Version(int(parts[0]), int(parts[1]))
     if version.major != SUPPORTED_MAJOR:
         message = f"major version {version.major} is not supported"
@@ -87,6 +125,8 @@ def check_schema(
     A newer minor version has no schema here; it is read leniently.
     """
     if version.newer:
+        if "artifact_type" not in data:
+            report.add("error", "schema", "$", "artifact_type is required")
         return
     name = schema_name(kind, f"{version.major}.{version.minor}.0")
     if not resources.files("ontospan.schema").joinpath(name).is_file():
@@ -103,6 +143,9 @@ def _parse(
     if not isinstance(data, Mapping):
         report.add("error", "not_an_object", "$", "an annotated document is an object")
         return None
+    check_unicode(data, report)
+    if not report.ok:
+        return None
     version = check_version(data.get("schema_version"), report)
     if version is None:
         return None
@@ -110,10 +153,18 @@ def _parse(
     if not report.ok:
         return None
     try:
-        return AnnotatedDocument.model_validate(data), version
+        unit = (
+            AnnotatedDocument.model_validate_json(json.dumps(dict(data)), strict=True)
+            if version.newer
+            else AnnotatedDocument.model_validate(data)
+        )
+        return unit, version
     except ValidationError as exc:
         for error in exc.errors():
             report.add("error", "model", _path(error["loc"]), error["msg"])
+        return None
+    except (TypeError, ValueError) as exc:
+        report.add("error", "model", "$", str(exc))
         return None
 
 
@@ -278,22 +329,32 @@ def validate(
 def load_annotated_document(
     data: bytes | str | Mapping[str, Any],
     ontologies: Mapping[str, OntologyView] | None = None,
+    *,
+    report: ValidationReport | None = None,
 ) -> AnnotatedDocument:
     """Parse and validate; raises ``FormatError`` on any error."""
     raw: object = data
     if isinstance(data, bytes | str):
         try:
-            raw = json.loads(data)
-        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-            raise fail("invalid_json", "$", str(exc)) from exc
-    report = validate(raw, ontologies)
-    if not report.ok:
-        raise FormatError(report)
+            raw = parse_json(data)
+        except FormatError as exc:
+            if report is not None:
+                report.issues.extend(exc.report.issues)
+            raise
+    checked = validate(raw, ontologies)
+    if report is not None:
+        report.issues.extend(checked.issues)
+    if not checked.ok:
+        raise FormatError(checked)
     return AnnotatedDocument.model_validate(raw)
 
 
 def dump_json(model: BaseModel) -> bytes:
     """Stable UTF-8 JSON: sorted keys, two-space indent, LF, trailing newline."""
     data = model.model_dump(mode="json")
+    checked = ValidationReport()
+    check_unicode(data, checked)
+    if not checked.ok:
+        raise FormatError(checked)
     text = json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     return text.encode("utf-8")

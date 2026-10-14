@@ -1,3 +1,4 @@
+import json
 from typing import Any
 
 import pytest
@@ -5,8 +6,112 @@ from builders import FIXTURES, HPO_LAYER, SEIZURE, TEXT, annotation, axes, unit
 
 from ontospan.models import AnnotatedDocument, Layer, OntologyResource
 from ontospan.ontology import ObographOntology
-from ontospan.report import FormatError
+from ontospan.report import FormatError, ValidationReport
 from ontospan.validate import dump_json, load_annotated_document, validate
+
+
+@pytest.mark.parametrize("location", ["unknown", "segment", "key"])
+def test_all_strings_are_checked_for_invalid_unicode(
+    sample_unit: AnnotatedDocument, location: str
+) -> None:
+    data = dumped(sample_unit)
+    data["schema_version"] = "1.1.0"
+    if location == "unknown":
+        data["future"] = ["\ud800"]
+    elif location == "key":
+        data["\ud800"] = "value"
+    else:
+        data["annotation_set"]["annotations"][0]["mentions"][0]["segments"][0][
+            "text"
+        ] = "\ud800"
+    assert codes(data) == ["invalid_unicode"]
+    with pytest.raises(FormatError) as raised:
+        load_annotated_document(json.dumps(data))
+    assert raised.value.report.errors[0].code == "invalid_unicode"
+    if location == "unknown":
+        with pytest.raises(FormatError) as raised:
+            dump_json(AnnotatedDocument.model_validate(data))
+        assert raised.value.report.errors[0].code == "invalid_unicode"
+
+
+@pytest.mark.parametrize("version", ["².0.0", "\uff11.\uff10.\uff10", "01.0.0"])
+def test_versions_use_ascii_semver(
+    sample_unit: AnnotatedDocument, version: str
+) -> None:
+    data = dumped(sample_unit)
+    data["schema_version"] = version
+    assert codes(data) == ["schema_version"]
+
+
+def test_document_loaders_reject_duplicate_json_keys(
+    sample_unit: AnnotatedDocument,
+) -> None:
+    raw = (
+        dump_json(sample_unit)
+        .decode()
+        .replace(
+            '"schema_version": "1.0.0"',
+            '"schema_version": "2.0.0", "schema_version": "1.0.0"',
+        )
+    )
+    with pytest.raises(FormatError) as raised:
+        load_annotated_document(raw)
+    assert raised.value.report.errors[0].code == "duplicate_json_key"
+
+
+def test_loader_warnings_can_be_collected(sample_unit: AnnotatedDocument) -> None:
+    data = dumped(sample_unit)
+    data["schema_version"] = "1.1.0"
+    collected = ValidationReport()
+    load_annotated_document(data, report=collected)
+    assert [i.code for i in collected.warnings] == [
+        "newer_minor",
+        "hierarchy_not_checked",
+    ]
+
+
+def test_newer_minor_still_requires_explicit_artifact_type(
+    sample_unit: AnnotatedDocument,
+) -> None:
+    data = dumped(sample_unit)
+    data["schema_version"] = "1.1.0"
+    del data["artifact_type"]
+    assert codes(data) == ["schema"]
+
+
+def test_invalid_unicode_is_reported_and_loading_raises_format_error(
+    sample_unit: AnnotatedDocument,
+) -> None:
+    data = dumped(sample_unit)
+    data["document"]["text"] = "\ud800"
+    assert codes(data) == ["invalid_unicode"]
+    with pytest.raises(FormatError) as raised:
+        load_annotated_document(json.dumps(data))
+    assert raised.value.report.errors[0].code == "invalid_unicode"
+
+
+@pytest.mark.parametrize("bad_start", ["6", 6.0, True])
+def test_newer_minor_keeps_known_json_types_strict(
+    sample_unit: AnnotatedDocument, bad_start: object
+) -> None:
+    data = dumped(sample_unit)
+    data["schema_version"] = "1.1.0"
+    data["annotation_set"]["annotations"][0]["mentions"][0]["segments"][0]["start"] = (
+        bad_start
+    )
+    assert "model" in codes(data)
+
+
+def test_newer_minor_preserves_json_datetime_and_array_semantics(
+    sample_unit: AnnotatedDocument,
+) -> None:
+    data = dumped(sample_unit)
+    data["schema_version"] = "1.1.0"
+    data["document"]["optional_new_field"] = [1, "kept"]
+    assert codes(data) == []
+    loaded = load_annotated_document(json.dumps(data))
+    assert loaded.annotation_set.created_at.isoformat() == "2026-10-14T12:00:00+00:00"
+    assert loaded.document.model_dump()["optional_new_field"] == [1, "kept"]
 
 
 def codes(data: object, **options: Any) -> list[str]:

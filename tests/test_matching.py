@@ -198,3 +198,21 @@ def test_two_empty_sets_agree_fully() -> None:
         result.modifier_agreement,
     )
     assert scores == (1.0, 1.0, 1.0, 1.0, 1.0, None)
+
+
+def test_term_counts_for_microaveraging_count_distinct_labels() -> None:
+    left = [
+        a("a1", SEIZURE, (19, 32)),
+        a("a2", SEIZURE, (37, 43)),
+        a("a3", FEVER, (37, 43)),
+    ]
+    right = [
+        a("b1", SEIZURE, (19, 32)),
+        a("b2", HYPOTONIA, (0, 9)),
+        a("b3", HYPOTONIA, (0, 10)),
+    ]
+    result = agreement(left, right, T)
+    assert (result.terms_a, result.terms_b, result.terms_equal) == (2, 2, 1)
+    assert result.term_f1 == 0.5
+    empty = agreement([], [], T)
+    assert (empty.terms_a, empty.terms_b, empty.terms_equal) == (0, 0, 0)

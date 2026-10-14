@@ -2,9 +2,12 @@ import json
 from importlib import resources
 from typing import Any
 
+import jsonschema
 import pytest
+from builders import CREATED, HPO_LAYER, sample
 
 from ontospan import SCHEMA_VERSION
+from ontospan.models import FileEntry, Manifest
 from ontospan.profiles import hpo
 from ontospan.schema import (
     DOCUMENT,
@@ -19,6 +22,29 @@ STALE = (
     "{} differs from the models. Run `uv run python -m ontospan.schema_export`. "
     "If no model changed, the pydantic version did: keep the pinned minor."
 )
+
+
+@pytest.mark.parametrize("kind", [DOCUMENT, MANIFEST])
+def test_serialized_artifacts_require_an_explicit_schema_version(kind: str) -> None:
+    model = (
+        sample()
+        if kind == DOCUMENT
+        else Manifest(
+            bundle_id="b",
+            created_at=CREATED,
+            layers=(HPO_LAYER,),
+            files=(FileEntry(path="documents/0.json", sha256="0" * 64),),
+        )
+    )
+    data = model.model_dump(mode="json")
+    assert data["schema_version"] == SCHEMA_VERSION
+    validator = jsonschema.Draft202012Validator(build_schemas()[schema_name(kind)])
+    assert validator.is_valid(data)
+    del data["schema_version"]
+    assert not validator.is_valid(data)
+    data["schema_version"] = SCHEMA_VERSION
+    del data["artifact_type"]
+    assert not validator.is_valid(data)
 
 
 def committed(name: str) -> Any:

@@ -34,3 +34,10 @@ def test_a_document_from_bytes_must_be_utf8() -> None:
 
 def test_a_segment_quotes_its_text() -> None:
     assert segment("Keine Krampfanfälle", 6, 19).text == "Krampfanfälle"
+
+
+def test_all_leading_boms_are_removed_and_canonicalization_is_idempotent() -> None:
+    raw = "\ufeff\ufeff\ufeffCafé\r\n"
+    assert canonical_text(raw) == "Café\n"
+    assert canonical_text(canonical_text(raw)) == "Café\n"
+    assert make_document("d", "de", raw).text == "Café\n"

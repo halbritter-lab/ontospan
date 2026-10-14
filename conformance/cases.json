@@ -1,6 +1,52 @@
 {
   "cases": [
     {
+      "artifact_type": "annotated_document",
+      "errors": [
+        "schema"
+      ],
+      "file": "invalid/document-missing-artifact-type.json",
+      "hpo_profile_schema": null,
+      "warnings": []
+    },
+    {
+      "artifact_type": "bundle",
+      "errors": [
+        "schema"
+      ],
+      "file": "invalid/manifest-missing-artifact-type.json",
+      "hpo_profile_schema": null,
+      "warnings": []
+    },
+    {
+      "artifact_type": "annotated_document",
+      "errors": [
+        "invalid_unicode"
+      ],
+      "file": "invalid/unicode-surrogate.json",
+      "hpo_profile_schema": null,
+      "warnings": []
+    },
+    {
+      "artifact_type": "annotated_document",
+      "errors": [
+        "schema_version"
+      ],
+      "file": "invalid/document-missing-schema-version.json",
+      "hpo_profile_schema": null,
+      "warnings": []
+    },
+    {
+      "artifact_type": "bundle",
+      "errors": [
+        "schema_version"
+      ],
+      "file": "invalid/manifest-missing-schema-version.json",
+      "hpo_profile_schema": null,
+      "warnings": []
+    },
+    {
+      "artifact_type": "annotated_document",
       "errors": [],
       "file": "valid/sample.json",
       "hpo_profile_schema": true,
@@ -9,6 +55,7 @@
       ]
     },
     {
+      "artifact_type": "annotated_document",
       "errors": [],
       "file": "valid/discontinuous-mention.json",
       "hpo_profile_schema": true,
@@ -17,6 +64,7 @@
       ]
     },
     {
+      "artifact_type": "annotated_document",
       "errors": [],
       "file": "valid/document-level.json",
       "hpo_profile_schema": true,
@@ -25,12 +73,14 @@
       ]
     },
     {
+      "artifact_type": "annotated_document",
       "errors": [],
       "file": "valid/generic-layer.json",
       "hpo_profile_schema": null,
       "warnings": []
     },
     {
+      "artifact_type": "annotated_document",
       "errors": [],
       "file": "valid/newer-minor.json",
       "hpo_profile_schema": true,
@@ -41,6 +91,7 @@
       ]
     },
     {
+      "artifact_type": "annotated_document",
       "errors": [
         "unsupported_major"
       ],
@@ -49,6 +100,7 @@
       "warnings": []
     },
     {
+      "artifact_type": "annotated_document",
       "errors": [
         "schema"
       ],
@@ -57,6 +109,7 @@
       "warnings": []
     },
     {
+      "artifact_type": "annotated_document",
       "errors": [
         "schema"
       ],
@@ -65,6 +118,7 @@
       "warnings": []
     },
     {
+      "artifact_type": "annotated_document",
       "errors": [
         "text_not_canonical",
         "text_hash"
@@ -76,6 +130,7 @@
       ]
     },
     {
+      "artifact_type": "annotated_document",
       "errors": [
         "segment_text_mismatch"
       ],
@@ -86,6 +141,7 @@
       ]
     },
     {
+      "artifact_type": "annotated_document",
       "errors": [
         "segment_out_of_range"
       ],
@@ -96,6 +152,7 @@
       ]
     },
     {
+      "artifact_type": "annotated_document",
       "errors": [
         "segments_unordered"
       ],
@@ -106,6 +163,7 @@
       ]
     },
     {
+      "artifact_type": "annotated_document",
       "errors": [
         "unknown_layer"
       ],
@@ -116,6 +174,7 @@
       ]
     },
     {
+      "artifact_type": "annotated_document",
       "errors": [
         "axes",
         "axis_value"
@@ -127,6 +186,7 @@
       ]
     },
     {
+      "artifact_type": "annotated_document",
       "errors": [
         "missing_evidence"
       ],
@@ -137,6 +197,7 @@
       ]
     },
     {
+      "artifact_type": "annotated_document",
       "errors": [
         "not_an_hpo_id"
       ],
@@ -147,6 +208,7 @@
       ]
     },
     {
+      "artifact_type": "annotated_document",
       "errors": [
         "not_an_hpo_id"
       ],
@@ -157,6 +219,7 @@
       ]
     },
     {
+      "artifact_type": "annotated_document",
       "errors": [
         "source_ref_syntax"
       ],

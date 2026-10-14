@@ -1,10 +1,13 @@
 import json
+from pathlib import Path
 from typing import Any
 
 import jsonschema
 import pytest
 from conformance_cases import ROOT, expected, files
 
+from ontospan.bundle import read_bundle
+from ontospan.report import FormatError
 from ontospan.schema import HPO_ANNOTATION, schema_name
 from ontospan.schema_export import build_schemas
 from ontospan.validate import validate
@@ -22,9 +25,17 @@ def test_the_committed_fixtures_are_up_to_date() -> None:
 
 
 @pytest.mark.parametrize("case", CASES, ids=[case["file"] for case in CASES])
-def test_each_fixture_gives_the_expected_codes(case: dict[str, Any]) -> None:
+def test_each_fixture_gives_the_expected_codes(
+    case: dict[str, Any], tmp_path: Path
+) -> None:
     data = json.loads((ROOT / case["file"]).read_text(encoding="utf-8"))
-    report = validate(data)
+    if case["artifact_type"] == "bundle":
+        (tmp_path / "manifest.json").write_text(json.dumps(data), encoding="utf-8")
+        with pytest.raises(FormatError) as raised:
+            read_bundle(tmp_path)
+        report = raised.value.report
+    else:
+        report = validate(data)
     assert [issue.code for issue in report.errors] == case["errors"]
     assert [issue.code for issue in report.warnings] == case["warnings"]
 

@@ -12,7 +12,7 @@ BOM = "﻿"
 
 def canonical_text(raw: str) -> str:
     """NFC with LF line endings and no leading BOM: the text offsets refer to."""
-    text = raw.removeprefix(BOM).replace("\r\n", "\n").replace("\r", "\n")
+    text = raw.lstrip(BOM).replace("\r\n", "\n").replace("\r", "\n")
     return unicodedata.normalize("NFC", text)
 
 

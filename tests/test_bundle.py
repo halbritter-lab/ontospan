@@ -9,13 +9,99 @@ from builders import CREATED, HPO_LAYER, SEIZURE, annotation, unit
 from ontospan import bundle
 from ontospan.bundle import read_bundle, write_bundle
 from ontospan.models import AnnotatedDocument, Contributor, Layer, OntologyResource
-from ontospan.report import FormatError
+from ontospan.report import FormatError, ValidationReport
+
+
+def test_bundle_warnings_have_unit_file_paths(tmp_path: Path) -> None:
+    write_bundle(tmp_path / "b", two_annotators(), bundle_id="b", created_at=CREATED)
+    report = ValidationReport()
+    read_bundle(tmp_path / "b", report=report)
+    assert [(i.code, i.path) for i in report.warnings] == [
+        ("hierarchy_not_checked", "documents/00000.json:annotation_set.layers[0]"),
+        ("hierarchy_not_checked", "documents/00001.json:annotation_set.layers[0]"),
+    ]
+
+
+def test_manifest_rejects_duplicate_json_keys(tmp_path: Path) -> None:
+    write_bundle(tmp_path / "b", two_annotators(), bundle_id="b", created_at=CREATED)
+    path = tmp_path / "b" / "manifest.json"
+    raw = path.read_text().replace(
+        '"schema_version": "1.0.0"',
+        '"schema_version": "2.0.0", "schema_version": "1.0.0"',
+    )
+    path.write_text(raw, encoding="utf-8")
+    assert error_codes(tmp_path / "b") == ["duplicate_json_key"]
+
 
 DIAGNOSIS = Layer(
     layer_id="diagnosis",
     profile="generic",
     ontology=OntologyResource(id="mondo", version="2026-06-01"),
 )
+
+
+@pytest.mark.parametrize("name", ["bundle", "bundle.zip"])
+def test_newer_units_keep_a_readable_manifest(tmp_path: Path, name: str) -> None:
+    data = two_annotators()[0].model_dump(mode="json")
+    data["schema_version"] = "1.1.3"
+    data["annotation_set"]["layers"][0]["ontology"]["future_resource"] = "kept"
+    data["annotation_set"]["layers"][0]["future_layer"] = {"kept": True}
+    newer = AnnotatedDocument.model_validate(data)
+    manifest = write_bundle(tmp_path / name, [newer], bundle_id="b", created_at=CREATED)
+    assert manifest.schema_version == "1.1.3"
+    assert read_bundle(tmp_path / name) == (manifest, [newer])
+
+
+def test_manifest_validation_precedes_writing(tmp_path: Path) -> None:
+    contributor = Contributor(actor_id="ann", future_field="unsupported")
+    with pytest.raises(FormatError) as raised:
+        write_bundle(
+            tmp_path / "b",
+            two_annotators(),
+            bundle_id="b",
+            created_at=CREATED,
+            contributors=[contributor],
+        )
+    assert [i.code for i in raised.value.report.errors] == ["schema"]
+    assert not (tmp_path / "b").exists()
+
+
+@pytest.mark.parametrize("conflicting", [False, True])
+def test_manifest_layer_ids_cannot_repeat(tmp_path: Path, conflicting: bool) -> None:
+    write_bundle(tmp_path / "b", two_annotators(), bundle_id="b", created_at=CREATED)
+    path = tmp_path / "b" / "manifest.json"
+    data = json.loads(path.read_bytes())
+    duplicate = dict(data["layers"][0])
+    if conflicting:
+        duplicate["profile"] = "generic"
+    data["layers"].insert(0, duplicate)
+    path.write_text(json.dumps(data), encoding="utf-8")
+    assert error_codes(tmp_path / "b") == ["duplicate_layer"]
+
+
+@pytest.mark.parametrize("damage", ["nonzip", "crc", "deflate"])
+def test_archive_damage_is_a_format_error(tmp_path: Path, damage: str) -> None:
+    path = tmp_path / "bad.zip"
+    if damage == "nonzip":
+        path.write_bytes(b"this is not a zip")
+    else:
+        compression = zipfile.ZIP_STORED if damage == "crc" else zipfile.ZIP_DEFLATED
+        with zipfile.ZipFile(path, "w", compression=compression) as archive:
+            archive.writestr("manifest.json", b'{"schema_version":"1.0.0"}')
+        payload = bytearray(path.read_bytes())
+        offset = (
+            30
+            + int.from_bytes(payload[26:28], "little")
+            + int.from_bytes(payload[28:30], "little")
+        )
+        payload[offset] ^= 255
+        path.write_bytes(payload)
+    assert error_codes(path) == ["invalid_archive"]
+
+
+def test_missing_archive_keeps_the_filesystem_error(tmp_path: Path) -> None:
+    with pytest.raises(FileNotFoundError):
+        read_bundle(tmp_path / "missing.zip")
 
 
 def two_annotators() -> list[AnnotatedDocument]:

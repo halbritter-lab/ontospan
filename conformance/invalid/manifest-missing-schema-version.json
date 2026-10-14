@@ -1,0 +1,26 @@
+{
+  "artifact_type": "bundle",
+  "bundle_id": "b",
+  "contributors": [],
+  "created_at": "2026-10-14T12:00:00Z",
+  "files": [
+    {
+      "path": "documents/0.json",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ],
+  "layers": [
+    {
+      "allowed_roots": [],
+      "layer_id": "hpo",
+      "ontology": {
+        "id": "hp",
+        "iri": null,
+        "sha256": null,
+        "version": "2026-06-23"
+      },
+      "profile": "hpo-phenotype"
+    }
+  ],
+  "release_name": null
+}

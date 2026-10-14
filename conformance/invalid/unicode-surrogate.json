@@ -1,0 +1,154 @@
+{
+  "annotation_set": {
+    "actors": [
+      {
+        "actor_id": "ann-03",
+        "kind": "human",
+        "model": null,
+        "name": null,
+        "run_id": null,
+        "version": null
+      }
+    ],
+    "annotation_set_id": "set-1",
+    "annotations": [
+      {
+        "annotation_id": "a1",
+        "axes": {
+          "assertion": {
+            "basis": "chosen",
+            "value": "absent"
+          },
+          "experiencer": {
+            "basis": "chosen",
+            "value": "patient"
+          },
+          "temporality": {
+            "basis": "chosen",
+            "value": "historical"
+          }
+        },
+        "document_level": false,
+        "layer_id": "hpo",
+        "mentions": [
+          {
+            "cue_segments": [
+              {
+                "end": 5,
+                "start": 0,
+                "text": "Keine"
+              }
+            ],
+            "segments": [
+              {
+                "end": 19,
+                "start": 6,
+                "text": "Krampfanf\u00e4lle"
+              }
+            ]
+          }
+        ],
+        "modifiers": [],
+        "provenance": {
+          "actor": {
+            "actor_id": "ann-03",
+            "kind": "human",
+            "model": null,
+            "name": null,
+            "run_id": null,
+            "version": null
+          },
+          "method": "manual",
+          "notes": [],
+          "source_refs": []
+        },
+        "term_id": "HP:0001250"
+      },
+      {
+        "annotation_id": "a2",
+        "axes": {
+          "assertion": {
+            "basis": "chosen",
+            "value": "present"
+          },
+          "experiencer": {
+            "basis": "chosen",
+            "value": "patient"
+          },
+          "temporality": {
+            "basis": "chosen",
+            "value": "current"
+          }
+        },
+        "document_level": false,
+        "layer_id": "hpo",
+        "mentions": [
+          {
+            "cue_segments": [],
+            "segments": [
+              {
+                "end": 76,
+                "start": 63,
+                "text": "Krampfanf\u00e4lle"
+              }
+            ]
+          }
+        ],
+        "modifiers": [
+          {
+            "segments": [
+              {
+                "end": 62,
+                "start": 55,
+                "text": "schwere"
+              }
+            ],
+            "term_id": "HP:0012828"
+          }
+        ],
+        "provenance": {
+          "actor": {
+            "actor_id": "ann-03",
+            "kind": "human",
+            "model": null,
+            "name": null,
+            "run_id": null,
+            "version": null
+          },
+          "method": "manual",
+          "notes": [],
+          "source_refs": []
+        },
+        "term_id": "HP:0001250"
+      }
+    ],
+    "blind": true,
+    "created_at": "2026-10-14T12:00:00Z",
+    "guideline_ref": null,
+    "layers": [
+      {
+        "allowed_roots": [],
+        "layer_id": "hpo",
+        "ontology": {
+          "id": "hp",
+          "iri": null,
+          "sha256": null,
+          "version": "2026-06-23"
+        },
+        "profile": "hpo-phenotype"
+      }
+    ],
+    "set_kind": "individual",
+    "stage": null
+  },
+  "artifact_type": "annotated_document",
+  "document": {
+    "document_id": "doc-1",
+    "language": "de",
+    "source_text_sha256": "0f88d695ae30bd003c8f4eb5d14c6e637675a2cb53ed10df69f6d16f5ab5cfee",
+    "subject_id": null,
+    "text": "\ud800",
+    "text_sha256": "0f88d695ae30bd003c8f4eb5d14c6e637675a2cb53ed10df69f6d16f5ab5cfee"
+  },
+  "schema_version": "1.0.0"
+}
