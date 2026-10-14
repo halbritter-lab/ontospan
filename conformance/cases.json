@@ -1,0 +1,170 @@
+{
+  "cases": [
+    {
+      "errors": [],
+      "file": "valid/sample.json",
+      "hpo_profile_schema": true,
+      "warnings": [
+        "hierarchy_not_checked"
+      ]
+    },
+    {
+      "errors": [],
+      "file": "valid/discontinuous-mention.json",
+      "hpo_profile_schema": true,
+      "warnings": [
+        "hierarchy_not_checked"
+      ]
+    },
+    {
+      "errors": [],
+      "file": "valid/document-level.json",
+      "hpo_profile_schema": true,
+      "warnings": [
+        "hierarchy_not_checked"
+      ]
+    },
+    {
+      "errors": [],
+      "file": "valid/generic-layer.json",
+      "hpo_profile_schema": null,
+      "warnings": []
+    },
+    {
+      "errors": [],
+      "file": "valid/newer-minor.json",
+      "hpo_profile_schema": true,
+      "warnings": [
+        "newer_minor",
+        "hierarchy_not_checked",
+        "unknown_profile"
+      ]
+    },
+    {
+      "errors": [
+        "unsupported_major"
+      ],
+      "file": "invalid/unsupported-major.json",
+      "hpo_profile_schema": null,
+      "warnings": []
+    },
+    {
+      "errors": [
+        "schema"
+      ],
+      "file": "invalid/unknown-field.json",
+      "hpo_profile_schema": null,
+      "warnings": []
+    },
+    {
+      "errors": [
+        "schema"
+      ],
+      "file": "invalid/timestamp-without-zone.json",
+      "hpo_profile_schema": null,
+      "warnings": []
+    },
+    {
+      "errors": [
+        "text_not_canonical",
+        "text_hash"
+      ],
+      "file": "invalid/text-not-canonical.json",
+      "hpo_profile_schema": true,
+      "warnings": [
+        "hierarchy_not_checked"
+      ]
+    },
+    {
+      "errors": [
+        "segment_text_mismatch"
+      ],
+      "file": "invalid/segment-text-mismatch.json",
+      "hpo_profile_schema": true,
+      "warnings": [
+        "hierarchy_not_checked"
+      ]
+    },
+    {
+      "errors": [
+        "segment_out_of_range"
+      ],
+      "file": "invalid/segment-out-of-range.json",
+      "hpo_profile_schema": true,
+      "warnings": [
+        "hierarchy_not_checked"
+      ]
+    },
+    {
+      "errors": [
+        "segments_unordered"
+      ],
+      "file": "invalid/segments-unordered.json",
+      "hpo_profile_schema": true,
+      "warnings": [
+        "hierarchy_not_checked"
+      ]
+    },
+    {
+      "errors": [
+        "unknown_layer"
+      ],
+      "file": "invalid/unknown-layer.json",
+      "hpo_profile_schema": null,
+      "warnings": [
+        "hierarchy_not_checked"
+      ]
+    },
+    {
+      "errors": [
+        "axes",
+        "axis_value"
+      ],
+      "file": "invalid/hpo-axes.json",
+      "hpo_profile_schema": false,
+      "warnings": [
+        "hierarchy_not_checked"
+      ]
+    },
+    {
+      "errors": [
+        "missing_evidence"
+      ],
+      "file": "invalid/hpo-missing-evidence.json",
+      "hpo_profile_schema": false,
+      "warnings": [
+        "hierarchy_not_checked"
+      ]
+    },
+    {
+      "errors": [
+        "not_an_hpo_id"
+      ],
+      "file": "invalid/hpo-not-an-hpo-id.json",
+      "hpo_profile_schema": false,
+      "warnings": [
+        "hierarchy_not_checked"
+      ]
+    },
+    {
+      "errors": [
+        "not_an_hpo_id"
+      ],
+      "file": "invalid/hpo-modifier-id.json",
+      "hpo_profile_schema": false,
+      "warnings": [
+        "hierarchy_not_checked"
+      ]
+    },
+    {
+      "errors": [
+        "source_ref_syntax"
+      ],
+      "file": "invalid/source-ref-syntax.json",
+      "hpo_profile_schema": true,
+      "warnings": [
+        "hierarchy_not_checked"
+      ]
+    }
+  ]
+}
