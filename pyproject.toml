@@ -1,0 +1,58 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ontospan"
+version = "1.0.0.dev0"
+description = "Shared format for ontology concept annotations on text spans: validation, HPO profile, matching and Phenopacket export"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "jsonschema>=4.22,<5",
+    "pydantic>=2.7,<3",
+]
+
+[project.optional-dependencies]
+phenopacket = [
+    "phenopackets>=2.0.2.post5,<3",
+    "protobuf>=4.25",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.15,<3",
+    "phenopackets>=2.0.2.post5,<3",
+    "protobuf>=4.25",
+    # The committed schemas are generated with this pydantic minor (see schema_export).
+    "pydantic>=2.14,<2.15",
+    "pytest>=8,<10",
+    "ruff>=0.9,<1",
+    "types-jsonschema",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ontospan"]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-config --strict-markers"
+testpaths = ["tests"]
+pythonpath = ["src", "tests"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["ontospan"]
+mypy_path = ["src"]
+
+[[tool.mypy.overrides]]
+module = ["phenopackets.*", "google.protobuf.*"]
+ignore_missing_imports = true
