@@ -5,15 +5,27 @@ version survives being read and written again (T1 F3, review decision D2).
 Strictness for a declared version comes from the generated JSON Schema, which
 closes every object (see ``schema_export``).
 
-Closed lists (``Basis``, ``ActorKind``, ``Method``, ``SetKind`` and the axis
-values of a profile) only change with a new major version.
+Closed lists (``Basis``, ``ActorKind``, ``Method``, ``SetKind``,
+``VariantOrigin`` and the axis values of a profile) only change with a new
+major version.
+
+Format 1.1 adds the optional document fields ``case_id``, ``variant`` and
+``translation`` and the optional manifest block ``release``.
 """
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, ClassVar, Literal
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    SerializerFunctionWrapHandler,
+    model_serializer,
+    model_validator,
+)
 
 from ontospan._version import SCHEMA_VERSION
 
@@ -27,10 +39,32 @@ Basis = Literal["chosen", "defaulted"]
 ActorKind = Literal["human", "tool"]
 Method = Literal["manual", "adopted", "edited", "merged", "tool"]
 SetKind = Literal["individual", "stage_result", "adjudicated", "release", "tool_output"]
+VariantOrigin = Literal[
+    "native", "machine_translation", "human_translation", "correction"
+]
 
 
 class _Model(BaseModel):
     model_config = ConfigDict(extra="allow", frozen=True)
+
+
+class _Omits1_1(_Model):
+    """Leaves out unset fields of format 1.1 when serializing.
+
+    A 1.0 unit or manifest is written again without them, so it still
+    matches the closed schema of the version it declares.
+    """
+
+    _omit_if_none: ClassVar[tuple[str, ...]] = ()
+
+    @model_serializer(mode="wrap")
+    def _omit_unset(self, handler: SerializerFunctionWrapHandler) -> Any:
+        data = handler(self)
+        if isinstance(data, dict):
+            for name in self._omit_if_none:
+                if data.get(name, ...) is None:
+                    del data[name]
+        return data
 
 
 class Segment(_Model):
@@ -121,13 +155,46 @@ class AnnotationSet(_Model):
     annotations: tuple[Annotation, ...] = ()
 
 
-class Document(_Model):
+class Variant(_Model):
+    """One text version of a case in one language (format 1.1)."""
+
+    version: int = Field(ge=1)
+    origin: VariantOrigin
+    # The text_sha256 of the source text (translation) or previous version.
+    derived_from: str | None = Field(default=None, pattern=SHA256)
+
+
+class TranslationCheck(_Model):
+    """One automatic check of a translation run."""
+
+    code: str = Field(min_length=1)
+    passed: bool
+    detail: str | None = None
+
+
+class Translation(_Model):
+    """The run that produced a translation and its automatic checks."""
+
+    provider: str = Field(min_length=1)
+    model: str | None = None
+    run_id: str | None = None
+    recipe: str | None = None
+    checks: tuple[TranslationCheck, ...] = ()
+
+
+class Document(_Omits1_1):
+    _omit_if_none = ("case_id", "variant", "translation")
+
     document_id: str = Field(min_length=1)
     language: str = Field(pattern=LANGUAGE)
     text: str
     text_sha256: str = Field(pattern=SHA256)
     source_text_sha256: str | None = Field(default=None, pattern=SHA256)
     subject_id: str | None = None
+    # Format 1.1: the case that groups the variants of one text.
+    case_id: str | None = Field(default=None, min_length=1)
+    variant: Variant | None = None
+    translation: Translation | None = None
 
 
 class AnnotatedDocument(_Model):
@@ -150,7 +217,29 @@ class FileEntry(_Model):
     sha256: str = Field(pattern=SHA256)
 
 
-class Manifest(_Model):
+class Producer(_Model):
+    name: str = Field(min_length=1)
+    version: str = Field(min_length=1)
+
+
+class SupersededRelease(_Model):
+    bundle_id: str = Field(min_length=1)
+    manifest_sha256: str = Field(pattern=SHA256)
+
+
+class ReleaseInfo(_Model):
+    """Release metadata of a bundle (format 1.1)."""
+
+    name: str = Field(min_length=1)
+    description: str | None = None
+    project_id: str | None = None
+    producer: Producer | None = None
+    supersedes: tuple[SupersededRelease, ...] = ()
+
+
+class Manifest(_Omits1_1):
+    _omit_if_none = ("release",)
+
     schema_version: str = Field(default=SCHEMA_VERSION, pattern=VERSION)
     artifact_type: Literal["bundle"] = "bundle"
     bundle_id: str = Field(min_length=1)
@@ -159,3 +248,5 @@ class Manifest(_Model):
     layers: tuple[Layer, ...] = Field(min_length=1)
     contributors: tuple[Contributor, ...] = ()
     files: tuple[FileEntry, ...] = Field(min_length=1)
+    # Format 1.1; release_name must equal release.name when both are set.
+    release: ReleaseInfo | None = None

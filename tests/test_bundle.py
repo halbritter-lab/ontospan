@@ -1,14 +1,32 @@
 import json
 import os
+import shutil
 import zipfile
 from pathlib import Path
 
 import pytest
-from builders import CREATED, HPO_LAYER, SEIZURE, annotation, unit
+from builders import (
+    CREATED,
+    HPO_LAYER,
+    SEIZURE,
+    annotation,
+    corrected_sample,
+    translated_sample,
+    unit,
+    with_variant,
+)
 
 from ontospan import bundle
 from ontospan.bundle import read_bundle, write_bundle
-from ontospan.models import AnnotatedDocument, Contributor, Layer, OntologyResource
+from ontospan.models import (
+    AnnotatedDocument,
+    Contributor,
+    Layer,
+    OntologyResource,
+    Producer,
+    ReleaseInfo,
+    SupersededRelease,
+)
 from ontospan.report import FormatError, ValidationReport
 
 
@@ -26,8 +44,8 @@ def test_manifest_rejects_duplicate_json_keys(tmp_path: Path) -> None:
     write_bundle(tmp_path / "b", two_annotators(), bundle_id="b", created_at=CREATED)
     path = tmp_path / "b" / "manifest.json"
     raw = path.read_text().replace(
-        '"schema_version": "1.0.0"',
-        '"schema_version": "2.0.0", "schema_version": "1.0.0"',
+        '"schema_version": "1.1.0"',
+        '"schema_version": "2.0.0", "schema_version": "1.1.0"',
     )
     path.write_text(raw, encoding="utf-8")
     assert error_codes(tmp_path / "b") == ["duplicate_json_key"]
@@ -43,12 +61,12 @@ DIAGNOSIS = Layer(
 @pytest.mark.parametrize("name", ["bundle", "bundle.zip"])
 def test_newer_units_keep_a_readable_manifest(tmp_path: Path, name: str) -> None:
     data = two_annotators()[0].model_dump(mode="json")
-    data["schema_version"] = "1.1.3"
+    data["schema_version"] = "1.2.3"
     data["annotation_set"]["layers"][0]["ontology"]["future_resource"] = "kept"
     data["annotation_set"]["layers"][0]["future_layer"] = {"kept": True}
     newer = AnnotatedDocument.model_validate(data)
     manifest = write_bundle(tmp_path / name, [newer], bundle_id="b", created_at=CREATED)
-    assert manifest.schema_version == "1.1.3"
+    assert manifest.schema_version == "1.2.3"
     assert read_bundle(tmp_path / name) == (manifest, [newer])
 
 
@@ -249,3 +267,130 @@ def test_manifest_layers_are_compared_by_id_not_by_order(tmp_path: Path) -> None
     data["layers"].pop()
     path.write_text(json.dumps(data), encoding="utf-8")
     assert error_codes(tmp_path / "b") == ["manifest_layers"]
+
+
+RELEASE = ReleaseInfo(
+    name="Gold v2",
+    description="Corrected release",
+    project_id="project-1",
+    producer=Producer(name="ontocurator", version="0.3.0"),
+    supersedes=(SupersededRelease(bundle_id="b-0", manifest_sha256="a" * 64),),
+)
+
+
+@pytest.mark.parametrize("name", ["bundle", "bundle.zip"])
+def test_the_release_block_round_trips(tmp_path: Path, name: str) -> None:
+    units = [translated_sample()]
+    manifest = write_bundle(
+        tmp_path / name, units, bundle_id="b-1", created_at=CREATED, release=RELEASE
+    )
+    assert manifest.release == RELEASE
+    assert manifest.release_name == "Gold v2"
+    assert read_bundle(tmp_path / name) == (manifest, units)
+
+
+def test_a_release_block_lifts_a_1_0_manifest_to_1_1(tmp_path: Path) -> None:
+    data = two_annotators()[0].model_dump(mode="json")
+    data["schema_version"] = "1.0.0"
+    old = AnnotatedDocument.model_validate(data)
+    manifest = write_bundle(
+        tmp_path / "b", [old], bundle_id="b-1", created_at=CREATED, release=RELEASE
+    )
+    assert manifest.schema_version == "1.1.0"
+    assert read_bundle(tmp_path / "b")[1] == [old]
+
+
+def test_a_1_0_bundle_stays_readable(tmp_path: Path) -> None:
+    units = []
+    for item in two_annotators():
+        data = item.model_dump(mode="json")
+        data["schema_version"] = "1.0.0"
+        units.append(AnnotatedDocument.model_validate(data))
+    manifest = write_bundle(
+        tmp_path / "b", units, bundle_id="b-1", created_at=CREATED, release_name="v1"
+    )
+    assert manifest.schema_version == "1.0.0"
+    assert manifest.release is None
+    assert read_bundle(tmp_path / "b") == (manifest, units)
+
+
+def test_release_name_must_match_the_release_block(tmp_path: Path) -> None:
+    with pytest.raises(FormatError) as raised:
+        write_bundle(
+            tmp_path / "b",
+            [translated_sample()],
+            bundle_id="b-1",
+            created_at=CREATED,
+            release_name="Gold v1",
+            release=RELEASE,
+        )
+    assert [i.code for i in raised.value.report.errors] == ["release_name_mismatch"]
+    assert not (tmp_path / "b").exists()
+
+    write_bundle(
+        tmp_path / "ok",
+        [translated_sample()],
+        bundle_id="b-1",
+        created_at=CREATED,
+        release=RELEASE,
+    )
+    path = tmp_path / "ok" / "manifest.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["release_name"] = "Gold v1"
+    path.write_text(json.dumps(data), encoding="utf-8")
+    assert error_codes(tmp_path / "ok") == ["release_name_mismatch"]
+
+
+def test_duplicate_variant_versions_are_refused(tmp_path: Path) -> None:
+    first = translated_sample()
+    assert first.document.variant is not None
+    other_text = unit([], text="Andere Übersetzung.", set_id="set-2")
+    second = with_variant(
+        other_text, first.document.variant, first.document.translation
+    )
+    with pytest.raises(FormatError) as raised:
+        write_bundle(
+            tmp_path / "b", [first, second], bundle_id="b-1", created_at=CREATED
+        )
+    assert [i.code for i in raised.value.report.errors] == ["variant_duplicate"]
+    assert not (tmp_path / "b").exists()
+
+
+def test_duplicate_variant_versions_are_refused_on_reading(tmp_path: Path) -> None:
+    first = translated_sample()
+    second = with_variant(
+        unit([], text="Andere Übersetzung.", set_id="set-2"),
+        first.document.variant,
+        first.document.translation,
+    )
+    write_bundle(tmp_path / "b", [first], bundle_id="b-1", created_at=CREATED)
+    write_bundle(tmp_path / "c", [second], bundle_id="b-1", created_at=CREATED)
+    shutil.copy(
+        tmp_path / "c" / "documents" / "00000.json",
+        tmp_path / "b" / "documents" / "00001.json",
+    )
+    path = tmp_path / "b" / "manifest.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["files"].append(
+        json.loads((tmp_path / "c" / "manifest.json").read_text("utf-8"))["files"][0]
+        | {"path": "documents/00001.json"}
+    )
+    path.write_text(json.dumps(data), encoding="utf-8")
+    assert error_codes(tmp_path / "b") == ["variant_duplicate"]
+
+
+def test_sets_of_one_variant_and_other_versions_may_share_a_bundle(
+    tmp_path: Path,
+) -> None:
+    units = [
+        translated_sample(),
+        renamed_set(translated_sample(), "set-2"),
+        renamed_set(corrected_sample(), "set-3"),
+    ]
+    manifest = write_bundle(tmp_path / "b", units, bundle_id="b-1", created_at=CREATED)
+    assert read_bundle(tmp_path / "b") == (manifest, units)
+
+
+def renamed_set(item: AnnotatedDocument, set_id: str) -> AnnotatedDocument:
+    changed = item.annotation_set.model_copy(update={"annotation_set_id": set_id})
+    return item.model_copy(update={"annotation_set": changed})

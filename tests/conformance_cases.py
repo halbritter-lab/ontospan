@@ -17,16 +17,28 @@ from typing import Any
 from builders import (
     CREATED,
     HPO_LAYER,
+    MACHINE_TRANSLATION,
     SEIZURE,
     SEVERE,
     TEXT,
     annotation,
     axes,
+    corrected_sample,
     sample,
+    translated_sample,
     unit,
+    with_variant,
 )
 
-from ontospan.models import AxisValue, FileEntry, Layer, Manifest, OntologyResource
+from ontospan.models import (
+    AxisValue,
+    FileEntry,
+    Layer,
+    Manifest,
+    OntologyResource,
+    ReleaseInfo,
+    Variant,
+)
 
 ROOT = Path(__file__).resolve().parent.parent / "conformance"
 CHECKED = ["hierarchy_not_checked"]
@@ -66,7 +78,7 @@ def _generic_layer() -> Data:
 
 def _newer_minor() -> Data:
     data = _sample()
-    data["schema_version"] = "1.1.0"
+    data["schema_version"] = "1.2.0"
     data["annotation_set"]["relations"] = [{"from": "a1", "to": "a2"}]
     data["annotation_set"]["layers"].append(
         {
@@ -123,6 +135,29 @@ def _manifest_missing_artifact_type() -> Data:
     data["schema_version"] = "1.0.0"
     del data["artifact_type"]
     return data
+
+
+def _variant_missing_derived_from() -> Data:
+    variant = Variant(version=1, origin="machine_translation")
+    return _dump(with_variant(sample(), variant, MACHINE_TRANSLATION))
+
+
+def _translation_on_native() -> Data:
+    variant = Variant(version=1, origin="native")
+    return _dump(with_variant(sample(), variant, MACHINE_TRANSLATION))
+
+
+def _manifest_release_name_mismatch() -> Data:
+    return _dump(
+        Manifest(
+            bundle_id="b",
+            release_name="Gold v1",
+            release=ReleaseInfo(name="Gold v2"),
+            created_at=CREATED,
+            layers=(HPO_LAYER,),
+            files=(FileEntry(path="documents/0.json", sha256="0" * 64),),
+        )
+    )
 
 
 # name -> (builder, errors, warnings, valid under the hpo profile schema or None)
@@ -241,6 +276,37 @@ CASES: dict[str, tuple[Callable[[], Data], list[str], list[str], bool | None]] =
         False,
     ),
     "invalid/source-ref-syntax": (_source_ref, ["source_ref_syntax"], CHECKED, True),
+    "valid/format-1-0": (
+        _changed(lambda d: d.update(schema_version="1.0.0")),
+        [],
+        CHECKED,
+        True,
+    ),
+    "valid/variant-translation": (
+        lambda: _dump(translated_sample()),
+        [],
+        CHECKED,
+        True,
+    ),
+    "valid/variant-correction": (lambda: _dump(corrected_sample()), [], CHECKED, True),
+    "invalid/variant-missing-derived-from": (
+        _variant_missing_derived_from,
+        ["variant_derived_from_missing"],
+        CHECKED,
+        True,
+    ),
+    "invalid/translation-on-native": (
+        _translation_on_native,
+        ["translation_unexpected"],
+        CHECKED,
+        True,
+    ),
+    "invalid/manifest-release-name-mismatch": (
+        _manifest_release_name_mismatch,
+        ["release_name_mismatch"],
+        [],
+        None,
+    ),
 }
 
 

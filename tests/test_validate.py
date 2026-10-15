@@ -15,7 +15,7 @@ def test_all_strings_are_checked_for_invalid_unicode(
     sample_unit: AnnotatedDocument, location: str
 ) -> None:
     data = dumped(sample_unit)
-    data["schema_version"] = "1.1.0"
+    data["schema_version"] = "1.2.0"
     if location == "unknown":
         data["future"] = ["\ud800"]
     elif location == "key":
@@ -50,8 +50,8 @@ def test_document_loaders_reject_duplicate_json_keys(
         dump_json(sample_unit)
         .decode()
         .replace(
-            '"schema_version": "1.0.0"',
-            '"schema_version": "2.0.0", "schema_version": "1.0.0"',
+            '"schema_version": "1.1.0"',
+            '"schema_version": "2.0.0", "schema_version": "1.1.0"',
         )
     )
     with pytest.raises(FormatError) as raised:
@@ -61,7 +61,7 @@ def test_document_loaders_reject_duplicate_json_keys(
 
 def test_loader_warnings_can_be_collected(sample_unit: AnnotatedDocument) -> None:
     data = dumped(sample_unit)
-    data["schema_version"] = "1.1.0"
+    data["schema_version"] = "1.2.0"
     collected = ValidationReport()
     load_annotated_document(data, report=collected)
     assert [i.code for i in collected.warnings] == [
@@ -74,7 +74,7 @@ def test_newer_minor_still_requires_explicit_artifact_type(
     sample_unit: AnnotatedDocument,
 ) -> None:
     data = dumped(sample_unit)
-    data["schema_version"] = "1.1.0"
+    data["schema_version"] = "1.2.0"
     del data["artifact_type"]
     assert codes(data) == ["schema"]
 
@@ -95,7 +95,7 @@ def test_newer_minor_keeps_known_json_types_strict(
     sample_unit: AnnotatedDocument, bad_start: object
 ) -> None:
     data = dumped(sample_unit)
-    data["schema_version"] = "1.1.0"
+    data["schema_version"] = "1.2.0"
     data["annotation_set"]["annotations"][0]["mentions"][0]["segments"][0]["start"] = (
         bad_start
     )
@@ -106,7 +106,7 @@ def test_newer_minor_preserves_json_datetime_and_array_semantics(
     sample_unit: AnnotatedDocument,
 ) -> None:
     data = dumped(sample_unit)
-    data["schema_version"] = "1.1.0"
+    data["schema_version"] = "1.2.0"
     data["document"]["optional_new_field"] = [1, "kept"]
     assert codes(data) == []
     loaded = load_annotated_document(json.dumps(data))
@@ -166,7 +166,7 @@ def test_a_newer_minor_version_is_read_with_warnings_and_kept_on_write(
     sample_unit: AnnotatedDocument,
 ) -> None:
     data = dumped(sample_unit)
-    data["schema_version"] = "1.1.0"
+    data["schema_version"] = "1.2.0"
     data["annotation_set"]["relations"] = [{"from": "a1", "to": "a2"}]
     data["annotation_set"]["layers"].append(
         {

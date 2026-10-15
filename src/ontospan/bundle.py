@@ -18,7 +18,14 @@ from pathlib import Path, PurePosixPath
 
 from pydantic import ValidationError
 
-from ontospan.models import AnnotatedDocument, Contributor, FileEntry, Layer, Manifest
+from ontospan.models import (
+    AnnotatedDocument,
+    Contributor,
+    FileEntry,
+    Layer,
+    Manifest,
+    ReleaseInfo,
+)
 from ontospan.ontology import OntologyView
 from ontospan.report import FormatError, ValidationReport
 from ontospan.schema import MANIFEST as MANIFEST_KIND
@@ -34,6 +41,12 @@ from ontospan.validate import (
 
 MANIFEST = "manifest.json"
 MAX_TOTAL_BYTES = 512 * 1024 * 1024
+# The first format version with the manifest ``release`` block.
+RELEASE_BLOCK_VERSION = "1.1.0"
+
+
+def _semver(version: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in version.split("."))
 
 
 def _layers(
@@ -64,6 +77,28 @@ def _duplicate_sets(
         seen.add(set_id)
 
 
+def _duplicate_variants(
+    units: Sequence[AnnotatedDocument], report: ValidationReport
+) -> None:
+    """One document, language and variant version has exactly one text.
+
+    Units without a variant are not compared, as in format 1.0. Whether
+    ``derived_from`` resolves is not checked: the source may live elsewhere.
+    """
+    texts: dict[tuple[str, str, int], str] = {}
+    for unit in units:
+        document = unit.document
+        if document.variant is None:
+            continue
+        key = (document.document_id, document.language, document.variant.version)
+        known = texts.setdefault(key, document.text_sha256)
+        if known != document.text_sha256:
+            message = (
+                f"document {key[0]!r} ({key[1]}) has two texts for version {key[2]}"
+            )
+            report.add("error", "variant_duplicate", key[0], message)
+
+
 def write_bundle(
     target: Path,
     units: Sequence[AnnotatedDocument],
@@ -72,12 +107,17 @@ def write_bundle(
     created_at: datetime,
     release_name: str | None = None,
     contributors: Sequence[Contributor] = (),
+    release: ReleaseInfo | None = None,
 ) -> Manifest:
     """Write a bundle; a target ending in .zip becomes a ZIP, otherwise a new directory.
 
-    Raises ``FormatError`` if a unit is invalid, layers conflict or a set id
-    repeats; nothing is written then.
+    ``release`` fills the manifest ``release`` block (format 1.1);
+    ``release_name`` defaults to its name and must equal it when both are given.
+    Raises ``FormatError`` if a unit is invalid, layers conflict, a set id
+    or a variant version repeats; nothing is written then.
     """
+    if release is not None and release_name is None:
+        release_name = release.name
     report = ValidationReport()
     if not units:
         report.add("error", "empty_bundle", "$", "a bundle needs at least one unit")
@@ -88,19 +128,21 @@ def write_bundle(
             )
     layers = _layers(units, report)
     _duplicate_sets(units, report)
+    _duplicate_variants(units, report)
     if not report.ok:
         raise FormatError(report)
+    versions = [unit.schema_version for unit in units]
+    if release is not None:
+        versions.append(RELEASE_BLOCK_VERSION)
     files = {
         f"documents/{index:05d}.json": dump_json(unit)
         for index, unit in enumerate(units)
     }
     manifest = Manifest(
-        schema_version=max(
-            (unit.schema_version for unit in units),
-            key=lambda v: tuple(int(part) for part in v.split(".")),
-        ),
+        schema_version=max(versions, key=_semver),
         bundle_id=bundle_id,
         release_name=release_name,
+        release=release,
         created_at=created_at,
         layers=tuple(layers.values()),
         contributors=tuple(contributors),
@@ -197,6 +239,13 @@ def _read_manifest(contents: Mapping[str, bytes], report: ValidationReport) -> M
                 f"layer {layer.layer_id!r} is declared twice",
             )
         seen_layers.add(layer.layer_id)
+    release = manifest.release
+    if release is not None and manifest.release_name not in (None, release.name):
+        message = (
+            f"release_name {manifest.release_name!r} differs from "
+            f"release.name {release.name!r}"
+        )
+        report.add("error", "release_name_mismatch", MANIFEST, message)
     if not report.ok:
         raise FormatError(report)
     return manifest
@@ -271,6 +320,7 @@ def _load_bundle(
                     issue.level, issue.code, f"{path}:{issue.path}", issue.message
                 )
     _duplicate_sets(units, report)
+    _duplicate_variants(units, report)
     layers = _layers(units, report)
     if report.ok and layers != {layer.layer_id: layer for layer in manifest.layers}:
         message = "manifest layers differ from the documents' layers"

@@ -6,6 +6,8 @@ Ontocurator, Phentrieve and phentrieve-benchmark.
 - Canonical text (NFC, LF, no BOM) with Unicode codepoint offsets.
 - One annotated document = one text + one annotation set; bundles group them.
 - Profiles: `generic` and `hpo-phenotype` (axes, modifiers, allowed roots).
+- Document variants (versions, translations and their checks) and release
+  metadata in bundle manifests (format 1.1).
 - Matching and agreement rules shared by every tool.
 - Phenopacket v2 export (`pip install ontospan[phenopacket]` adds parsing
   into the official classes).
@@ -98,6 +100,46 @@ filesystem failures such as a missing input file retain their normal exceptions.
   the warning `ontology_release_mismatch`.
 - In a bundle, every file is listed with its SHA-256, set ids are unique, and
   the manifest layers equal the union of the units' layers.
+- Variants (1.1): a `machine_translation`, `human_translation` or `correction`
+  names its `derived_from` text (`variant_derived_from_missing`). A `native`
+  variant is version 1 and is not derived (`variant_native_invalid`). A
+  `correction` is version 2 or later (`variant_version_invalid`).
+  `derived_from` is never the variant's own `text_sha256`
+  (`variant_self_reference`).
+- Translations (1.1): `translation` is only allowed on a translation variant
+  (`translation_unexpected`). A translation variant without it gets the
+  warning `translation_missing`, since a human translation may have no run data.
+- In a bundle (1.1), units with the same `document_id`, `language` and
+  `variant.version` have the same `text_sha256` (`variant_duplicate`). Units
+  without `variant` are not compared. `release_name` equals `release.name`
+  when both are set (`release_name_mismatch`).
+
+### Format 1.1: variants, translations and release metadata
+
+1.1 adds optional fields only; a 1.0 unit or bundle stays valid and is
+checked against the frozen 1.0 schemas.
+
+- `document.case_id` groups the variants of one case, e.g. its original and
+  its translations.
+- `document.variant` is one text version in one language: `version` (1, 2,
+  ...), `origin` (`native`, `machine_translation`, `human_translation`,
+  `correction`) and `derived_from`, the `text_sha256` of the source text
+  (translation) or of the previous version (correction).
+- `document.translation` describes the run that produced a translation:
+  `provider`, `model`, `run_id`, `recipe` and its automatic `checks`
+  (`code`, `passed`, `detail`).
+- The manifest `release` block: `name`, `description`, `project_id`,
+  `producer` (`name`, `version`) and `supersedes` (`bundle_id`,
+  `manifest_sha256`) for the release it corrects. `write_bundle(...,
+  release=...)` fills it and sets `release_name` to its name; the manifest
+  then declares at least 1.1.0.
+
+ontospan does not resolve `derived_from`: the source text may live outside
+the bundle, e.g. in the consumer's project. Consumers that need the source
+look it up by its hash.
+
+Unset 1.1 fields are left out when a unit or manifest is serialized, so a
+1.0 unit read and written again still matches the 1.0 schema.
 
 ### References
 
@@ -121,6 +163,7 @@ loaders check syntax without requiring those targets to be locally available.
   reject unknown major versions.
 - Every released minor version keeps its frozen schema files. A unit is
   checked against the schema of the version it declares.
+- Released: 1.0 and 1.1 (see `CHANGELOG.md`).
 
 ## Matching and agreement
 

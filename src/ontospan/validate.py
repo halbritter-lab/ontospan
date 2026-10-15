@@ -202,6 +202,51 @@ def _check_actor(actor: Actor, path: str, report: ValidationReport) -> None:
         report.add("warning", "tool_identity", path, message)
 
 
+TRANSLATION_ORIGINS = frozenset({"machine_translation", "human_translation"})
+
+
+def _check_variant(unit: AnnotatedDocument, report: ValidationReport) -> None:
+    """Rules of the format 1.1 variant and translation fields of a document.
+
+    Whether ``derived_from`` names a known text is left to the consumer: the
+    source may live outside the bundle.
+    """
+    document = unit.document
+    variant = document.variant
+    if variant is None:
+        if document.translation is not None:
+            message = "translation data needs a translation variant"
+            report.add(
+                "error", "translation_unexpected", "document.translation", message
+            )
+        return
+    where = "document.variant"
+    if variant.origin == "native":
+        if variant.derived_from is not None or variant.version != 1:
+            message = "a native variant is version 1 and is not derived"
+            report.add("error", "variant_native_invalid", where, message)
+    elif variant.derived_from is None:
+        message = f"a {variant.origin} variant names the text it is derived from"
+        report.add(
+            "error", "variant_derived_from_missing", f"{where}.derived_from", message
+        )
+    if variant.origin == "correction" and variant.version < 2:
+        message = "a correction is version 2 or later"
+        report.add("error", "variant_version_invalid", f"{where}.version", message)
+    if variant.derived_from == document.text_sha256:
+        message = "a variant cannot be derived from its own text"
+        report.add("error", "variant_self_reference", f"{where}.derived_from", message)
+    if variant.origin in TRANSLATION_ORIGINS:
+        if document.translation is None:
+            message = "a translation variant has no translation run data"
+            report.add(
+                "warning", "translation_missing", "document.translation", message
+            )
+    elif document.translation is not None:
+        message = f"translation data on a {variant.origin} variant"
+        report.add("error", "translation_unexpected", "document.translation", message)
+
+
 def _check_layers(
     unit: AnnotatedDocument,
     version: Version,
@@ -249,6 +294,7 @@ def _check_content(
         report.add("error", "text_not_canonical", "document.text", message)
     if text_sha256(text) != unit.document.text_sha256:
         report.add("error", "text_hash", "document.text_sha256", "hash does not match")
+    _check_variant(unit, report)
     if require_tool_identity:
         for index, actor in enumerate(unit.annotation_set.actors):
             _check_actor(actor, f"annotation_set.actors[{index}]", report)

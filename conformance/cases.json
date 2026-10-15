@@ -228,6 +228,64 @@
       "warnings": [
         "hierarchy_not_checked"
       ]
+    },
+    {
+      "artifact_type": "annotated_document",
+      "errors": [],
+      "file": "valid/format-1-0.json",
+      "hpo_profile_schema": true,
+      "warnings": [
+        "hierarchy_not_checked"
+      ]
+    },
+    {
+      "artifact_type": "annotated_document",
+      "errors": [],
+      "file": "valid/variant-translation.json",
+      "hpo_profile_schema": true,
+      "warnings": [
+        "hierarchy_not_checked"
+      ]
+    },
+    {
+      "artifact_type": "annotated_document",
+      "errors": [],
+      "file": "valid/variant-correction.json",
+      "hpo_profile_schema": true,
+      "warnings": [
+        "hierarchy_not_checked"
+      ]
+    },
+    {
+      "artifact_type": "annotated_document",
+      "errors": [
+        "variant_derived_from_missing"
+      ],
+      "file": "invalid/variant-missing-derived-from.json",
+      "hpo_profile_schema": true,
+      "warnings": [
+        "hierarchy_not_checked"
+      ]
+    },
+    {
+      "artifact_type": "annotated_document",
+      "errors": [
+        "translation_unexpected"
+      ],
+      "file": "invalid/translation-on-native.json",
+      "hpo_profile_schema": true,
+      "warnings": [
+        "hierarchy_not_checked"
+      ]
+    },
+    {
+      "artifact_type": "bundle",
+      "errors": [
+        "release_name_mismatch"
+      ],
+      "file": "invalid/manifest-release-name-mismatch.json",
+      "hpo_profile_schema": null,
+      "warnings": []
     }
   ]
 }
