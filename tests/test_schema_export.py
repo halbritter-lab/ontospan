@@ -1,3 +1,4 @@
+import hashlib
 import json
 from importlib import resources
 from typing import Any
@@ -94,3 +95,31 @@ def test_the_profile_schema_lists_the_axis_values_of_the_profile() -> None:
     for axis, values in hpo.AXES.items():
         assert axes["properties"][axis]["properties"]["value"]["enum"] == list(values)
     assert schema["$id"] == f"urn:ontospan:schema:{schema_name(HPO_ANNOTATION)}"
+
+
+# SHA-256 of the 1.0 files as released on main (263368b); they never change.
+FROZEN_1_0 = {
+    "annotated-document-1.0.json": (
+        "9e61aec9e4a6bfafc7d9a8ea0e05c8ed0d5acb18212b4e61f91bbb8b635a9b12"
+    ),
+    "bundle-manifest-1.0.json": (
+        "77a9d7b3ab4bbd32d1fffb42f8d62dd60c98515bd5b2ead00c11a240acd023d3"
+    ),
+    "hpo-phenotype-annotation-1.0.json": (
+        "3804a9774ac88e589551596f627ecc2fe6aabef5836c2889bf45f4824e94a0c4"
+    ),
+}
+
+
+@pytest.mark.parametrize("name", list(FROZEN_1_0))
+def test_frozen_1_0_schemas_are_unchanged(name: str) -> None:
+    data = resources.files("ontospan.schema").joinpath(name).read_bytes()
+    assert hashlib.sha256(data).hexdigest() == FROZEN_1_0[name]
+
+
+def test_the_current_schemas_describe_the_1_1_fields() -> None:
+    built = build_schemas()
+    defs = built[schema_name(DOCUMENT)]["$defs"]
+    assert {"case_id", "variant", "translation"} <= set(defs["Document"]["properties"])
+    manifest = built[schema_name(MANIFEST)]
+    assert "release" in manifest["properties"]

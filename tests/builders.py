@@ -13,13 +13,17 @@ from ontospan.models import (
     Annotation,
     AnnotationSet,
     AxisValue,
+    Document,
     Layer,
     Mention,
     Modifier,
     OntologyResource,
     Provenance,
+    Translation,
+    TranslationCheck,
+    Variant,
 )
-from ontospan.text import make_document, segment
+from ontospan.text import make_document, segment, text_sha256
 
 FIXTURES = Path(__file__).parent / "fixtures"
 TEXT = "Keine Krampfanfälle in der Neonatalzeit. Seit 2 Wochen schwere Krampfanfälle."
@@ -32,6 +36,19 @@ HPO_LAYER = Layer(
     ontology=OntologyResource(id="hp", version="2026-06-23"),
 )
 CREATED = datetime(2026, 10, 14, 12, 0, tzinfo=UTC)
+# The English source of the German sample text, for translation variants.
+SOURCE_TEXT = "No seizures in the neonatal period. Severe seizures for 2 weeks."
+SOURCE_SHA256 = text_sha256(SOURCE_TEXT)
+MACHINE_TRANSLATION = Translation(
+    provider="test-mt",
+    model="m1",
+    run_id="run-1",
+    recipe="recipe-1",
+    checks=(
+        TranslationCheck(code="units_added", passed=True),
+        TranslationCheck(code="length_ratio", passed=False, detail="0.4"),
+    ),
+)
 
 
 def axes(
@@ -136,3 +153,37 @@ def sample() -> AnnotatedDocument:
             annotation("a2", SEIZURE, [(63, 76)], modifiers=[(SEVERE, [(55, 62)])]),
         ]
     )
+
+
+def with_variant(
+    item: AnnotatedDocument,
+    variant: Variant | None,
+    translation: Translation | None = None,
+    *,
+    case_id: str | None = "case-1",
+) -> AnnotatedDocument:
+    """The unit with format 1.1 variant fields on its document."""
+    document = Document.model_validate(
+        {
+            **item.document.model_dump(),
+            "case_id": case_id,
+            "variant": variant,
+            "translation": translation,
+        }
+    )
+    return item.model_copy(update={"document": document})
+
+
+def translated_sample() -> AnnotatedDocument:
+    """The sample as a machine translation of ``SOURCE_TEXT``."""
+    variant = Variant(
+        version=1, origin="machine_translation", derived_from=SOURCE_SHA256
+    )
+    return with_variant(sample(), variant, MACHINE_TRANSLATION)
+
+
+def corrected_sample() -> AnnotatedDocument:
+    """The sample as version 2, a correction of an earlier German text."""
+    earlier = text_sha256(TEXT.replace("schwere", "starke"))
+    variant = Variant(version=2, origin="correction", derived_from=earlier)
+    return with_variant(sample(), variant)

@@ -1,0 +1,133 @@
+{
+  "$id": "urn:ontospan:schema:hpo-phenotype-annotation-1.1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "else": {
+    "properties": {
+      "mentions": {
+        "minItems": 1
+      }
+    },
+    "required": [
+      "mentions"
+    ]
+  },
+  "if": {
+    "properties": {
+      "document_level": {
+        "const": true
+      }
+    },
+    "required": [
+      "document_level"
+    ]
+  },
+  "properties": {
+    "axes": {
+      "additionalProperties": false,
+      "properties": {
+        "assertion": {
+          "properties": {
+            "basis": {
+              "enum": [
+                "chosen",
+                "defaulted"
+              ]
+            },
+            "value": {
+              "enum": [
+                "present",
+                "absent",
+                "uncertain"
+              ]
+            }
+          },
+          "required": [
+            "value",
+            "basis"
+          ],
+          "type": "object"
+        },
+        "experiencer": {
+          "properties": {
+            "basis": {
+              "enum": [
+                "chosen",
+                "defaulted"
+              ]
+            },
+            "value": {
+              "enum": [
+                "patient",
+                "family_member",
+                "other",
+                "unknown"
+              ]
+            }
+          },
+          "required": [
+            "value",
+            "basis"
+          ],
+          "type": "object"
+        },
+        "temporality": {
+          "properties": {
+            "basis": {
+              "enum": [
+                "chosen",
+                "defaulted"
+              ]
+            },
+            "value": {
+              "enum": [
+                "current",
+                "historical",
+                "unknown"
+              ]
+            }
+          },
+          "required": [
+            "value",
+            "basis"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "assertion",
+        "experiencer",
+        "temporality"
+      ],
+      "type": "object"
+    },
+    "modifiers": {
+      "items": {
+        "properties": {
+          "term_id": {
+            "pattern": "^HP:\\d{7}$",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "term_id": {
+      "pattern": "^HP:\\d{7}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "term_id",
+    "axes"
+  ],
+  "then": {
+    "properties": {
+      "mentions": {
+        "maxItems": 0
+      }
+    }
+  },
+  "title": "Annotation of an hpo-phenotype layer",
+  "type": "object"
+}

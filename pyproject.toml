@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ontospan"
-version = "1.0.0.dev0"
+version = "1.1.0"
 description = "Shared format for ontology concept annotations on text spans: validation, HPO profile, matching and Phenopacket export"
 readme = "README.md"
 requires-python = ">=3.11"
