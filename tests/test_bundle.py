@@ -44,8 +44,8 @@ def test_manifest_rejects_duplicate_json_keys(tmp_path: Path) -> None:
     write_bundle(tmp_path / "b", two_annotators(), bundle_id="b", created_at=CREATED)
     path = tmp_path / "b" / "manifest.json"
     raw = path.read_text().replace(
-        '"schema_version": "1.1.0"',
-        '"schema_version": "2.0.0", "schema_version": "1.1.0"',
+        '"schema_version": "1.2.0"',
+        '"schema_version": "2.0.0", "schema_version": "1.2.0"',
     )
     path.write_text(raw, encoding="utf-8")
     assert error_codes(tmp_path / "b") == ["duplicate_json_key"]
@@ -61,12 +61,12 @@ DIAGNOSIS = Layer(
 @pytest.mark.parametrize("name", ["bundle", "bundle.zip"])
 def test_newer_units_keep_a_readable_manifest(tmp_path: Path, name: str) -> None:
     data = two_annotators()[0].model_dump(mode="json")
-    data["schema_version"] = "1.2.3"
+    data["schema_version"] = "1.3.3"
     data["annotation_set"]["layers"][0]["ontology"]["future_resource"] = "kept"
     data["annotation_set"]["layers"][0]["future_layer"] = {"kept": True}
     newer = AnnotatedDocument.model_validate(data)
     manifest = write_bundle(tmp_path / name, [newer], bundle_id="b", created_at=CREATED)
-    assert manifest.schema_version == "1.2.3"
+    assert manifest.schema_version == "1.3.3"
     assert read_bundle(tmp_path / name) == (manifest, [newer])
 
 

@@ -123,3 +123,17 @@ def test_the_current_schemas_describe_the_1_1_fields() -> None:
     assert {"case_id", "variant", "translation"} <= set(defs["Document"]["properties"])
     manifest = built[schema_name(MANIFEST)]
     assert "release" in manifest["properties"]
+
+
+# Format 1.1 schemas from the released 4105ec1 commit remain frozen.
+FROZEN_1_1 = {
+    "annotated-document-1.1.json": "d1b279bd94f886da2043438b98fac36e513884e364228a1a236f3e7c0a5f1895",
+    "bundle-manifest-1.1.json": "64f15722644d38d6b5a5d9a369f1d4de5826d322d582ccba83f11d66e55b6bb4",
+    "hpo-phenotype-annotation-1.1.json": "1b1b58b17c75bcf28c1373a912c8bee244c0d08a13083388785c458c44253ab3",
+}
+
+
+@pytest.mark.parametrize("name", list(FROZEN_1_1))
+def test_frozen_1_1_schemas_are_unchanged(name: str) -> None:
+    data = resources.files("ontospan.schema").joinpath(name).read_bytes()
+    assert hashlib.sha256(data).hexdigest() == FROZEN_1_1[name]

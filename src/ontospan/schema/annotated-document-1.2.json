@@ -1,0 +1,752 @@
+{
+  "$defs": {
+    "Actor": {
+      "additionalProperties": false,
+      "properties": {
+        "actor_id": {
+          "minLength": 1,
+          "title": "Actor Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "human",
+            "tool"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Run Id"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Version"
+        }
+      },
+      "required": [
+        "actor_id",
+        "kind"
+      ],
+      "title": "Actor",
+      "type": "object"
+    },
+    "Annotation": {
+      "additionalProperties": false,
+      "properties": {
+        "annotation_id": {
+          "minLength": 1,
+          "title": "Annotation Id",
+          "type": "string"
+        },
+        "axes": {
+          "additionalProperties": {
+            "$ref": "#/$defs/AxisValue"
+          },
+          "title": "Axes",
+          "type": "object"
+        },
+        "document_level": {
+          "default": false,
+          "title": "Document Level",
+          "type": "boolean"
+        },
+        "layer_id": {
+          "minLength": 1,
+          "title": "Layer Id",
+          "type": "string"
+        },
+        "mentions": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Mention"
+          },
+          "title": "Mentions",
+          "type": "array"
+        },
+        "modifiers": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Modifier"
+          },
+          "title": "Modifiers",
+          "type": "array"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "review_resolution": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReviewResolution"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "term_id": {
+          "pattern": "^[A-Za-z][A-Za-z0-9_.]*:\\S+$",
+          "title": "Term Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "annotation_id",
+        "layer_id",
+        "term_id",
+        "provenance"
+      ],
+      "title": "Annotation",
+      "type": "object"
+    },
+    "AnnotationSet": {
+      "additionalProperties": false,
+      "properties": {
+        "actors": {
+          "items": {
+            "$ref": "#/$defs/Actor"
+          },
+          "minItems": 1,
+          "title": "Actors",
+          "type": "array"
+        },
+        "annotation_set_id": {
+          "minLength": 1,
+          "title": "Annotation Set Id",
+          "type": "string"
+        },
+        "annotations": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Annotation"
+          },
+          "title": "Annotations",
+          "type": "array"
+        },
+        "blind": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Blind"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "guideline_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Guideline Ref"
+        },
+        "layers": {
+          "items": {
+            "$ref": "#/$defs/Layer"
+          },
+          "minItems": 1,
+          "title": "Layers",
+          "type": "array"
+        },
+        "set_kind": {
+          "enum": [
+            "individual",
+            "stage_result",
+            "adjudicated",
+            "release",
+            "tool_output"
+          ],
+          "title": "Set Kind",
+          "type": "string"
+        },
+        "stage": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Stage"
+        }
+      },
+      "required": [
+        "annotation_set_id",
+        "set_kind",
+        "actors",
+        "created_at",
+        "layers"
+      ],
+      "title": "AnnotationSet",
+      "type": "object"
+    },
+    "AxisValue": {
+      "additionalProperties": false,
+      "properties": {
+        "basis": {
+          "enum": [
+            "chosen",
+            "defaulted"
+          ],
+          "title": "Basis",
+          "type": "string"
+        },
+        "value": {
+          "minLength": 1,
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value",
+        "basis"
+      ],
+      "title": "AxisValue",
+      "type": "object"
+    },
+    "Document": {
+      "additionalProperties": false,
+      "properties": {
+        "case_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Case Id"
+        },
+        "document_id": {
+          "minLength": 1,
+          "title": "Document Id",
+          "type": "string"
+        },
+        "language": {
+          "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]+)*$",
+          "title": "Language",
+          "type": "string"
+        },
+        "source_text_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Text Sha256"
+        },
+        "subject_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subject Id"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "text_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Text Sha256",
+          "type": "string"
+        },
+        "translation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Translation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "variant": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Variant"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "document_id",
+        "language",
+        "text",
+        "text_sha256"
+      ],
+      "title": "Document",
+      "type": "object"
+    },
+    "Layer": {
+      "additionalProperties": false,
+      "properties": {
+        "allowed_roots": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Allowed Roots",
+          "type": "array"
+        },
+        "layer_id": {
+          "minLength": 1,
+          "title": "Layer Id",
+          "type": "string"
+        },
+        "ontology": {
+          "$ref": "#/$defs/OntologyResource"
+        },
+        "profile": {
+          "minLength": 1,
+          "title": "Profile",
+          "type": "string"
+        }
+      },
+      "required": [
+        "layer_id",
+        "profile",
+        "ontology"
+      ],
+      "title": "Layer",
+      "type": "object"
+    },
+    "Mention": {
+      "additionalProperties": false,
+      "description": "One place a concept is mentioned; several segments make it discontinuous.",
+      "properties": {
+        "cue_segments": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Segment"
+          },
+          "title": "Cue Segments",
+          "type": "array"
+        },
+        "segments": {
+          "items": {
+            "$ref": "#/$defs/Segment"
+          },
+          "minItems": 1,
+          "title": "Segments",
+          "type": "array"
+        }
+      },
+      "required": [
+        "segments"
+      ],
+      "title": "Mention",
+      "type": "object"
+    },
+    "Modifier": {
+      "additionalProperties": false,
+      "properties": {
+        "segments": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Segment"
+          },
+          "title": "Segments",
+          "type": "array"
+        },
+        "term_id": {
+          "pattern": "^[A-Za-z][A-Za-z0-9_.]*:\\S+$",
+          "title": "Term Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "term_id"
+      ],
+      "title": "Modifier",
+      "type": "object"
+    },
+    "OntologyResource": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "iri": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Iri"
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sha256"
+        },
+        "version": {
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "version"
+      ],
+      "title": "OntologyResource",
+      "type": "object"
+    },
+    "Provenance": {
+      "additionalProperties": false,
+      "properties": {
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "method": {
+          "enum": [
+            "manual",
+            "adopted",
+            "edited",
+            "merged",
+            "tool"
+          ],
+          "title": "Method",
+          "type": "string"
+        },
+        "notes": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Notes",
+          "type": "array"
+        },
+        "source_refs": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "actor",
+        "method"
+      ],
+      "title": "Provenance",
+      "type": "object"
+    },
+    "ReviewResolution": {
+      "additionalProperties": false,
+      "description": "Reviewer uncertainty, independent of clinical axes and source provenance.\n\nThe optional note permits faithful historical exports. Applications may\nrequire a note on new review decisions in their own write validation.",
+      "properties": {
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "outcome": {
+          "const": "uncertain",
+          "title": "Outcome",
+          "type": "string"
+        },
+        "reviewer": {
+          "$ref": "#/$defs/Actor"
+        }
+      },
+      "required": [
+        "outcome",
+        "reviewer"
+      ],
+      "title": "ReviewResolution",
+      "type": "object"
+    },
+    "Segment": {
+      "additionalProperties": false,
+      "description": "A codepoint range [start, end) of the canonical text and the text it quotes.",
+      "properties": {
+        "end": {
+          "exclusiveMinimum": 0,
+          "title": "End",
+          "type": "integer"
+        },
+        "start": {
+          "minimum": 0,
+          "title": "Start",
+          "type": "integer"
+        },
+        "text": {
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "text"
+      ],
+      "title": "Segment",
+      "type": "object"
+    },
+    "Translation": {
+      "additionalProperties": false,
+      "description": "The run that produced a translation and its automatic checks.",
+      "properties": {
+        "checks": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/TranslationCheck"
+          },
+          "title": "Checks",
+          "type": "array"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        },
+        "provider": {
+          "minLength": 1,
+          "title": "Provider",
+          "type": "string"
+        },
+        "recipe": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Recipe"
+        },
+        "run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Run Id"
+        }
+      },
+      "required": [
+        "provider"
+      ],
+      "title": "Translation",
+      "type": "object"
+    },
+    "TranslationCheck": {
+      "additionalProperties": false,
+      "description": "One automatic check of a translation run.",
+      "properties": {
+        "code": {
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "detail": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Detail"
+        },
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "code",
+        "passed"
+      ],
+      "title": "TranslationCheck",
+      "type": "object"
+    },
+    "Variant": {
+      "additionalProperties": false,
+      "description": "One text version of a case in one language (format 1.1).",
+      "properties": {
+        "derived_from": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Derived From"
+        },
+        "origin": {
+          "enum": [
+            "native",
+            "machine_translation",
+            "human_translation",
+            "correction"
+          ],
+          "title": "Origin",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "version",
+        "origin"
+      ],
+      "title": "Variant",
+      "type": "object"
+    }
+  },
+  "$id": "urn:ontospan:schema:annotated-document-1.2.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "The atomic unit: one canonical text and exactly one annotation set.",
+  "properties": {
+    "annotation_set": {
+      "$ref": "#/$defs/AnnotationSet"
+    },
+    "artifact_type": {
+      "const": "annotated_document",
+      "default": "annotated_document",
+      "title": "Artifact Type",
+      "type": "string"
+    },
+    "document": {
+      "$ref": "#/$defs/Document"
+    },
+    "schema_version": {
+      "default": "1.2.0",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "artifact_type",
+    "document",
+    "annotation_set"
+  ],
+  "title": "AnnotatedDocument",
+  "type": "object"
+}

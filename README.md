@@ -141,6 +141,40 @@ look it up by its hash.
 Unset 1.1 fields are left out when a unit or manifest is serialized, so a
 1.0 unit read and written again still matches the 1.0 schema.
 
+### Format 1.2: reviewer resolution
+
+An annotation may carry a separate reviewer decision:
+
+```python
+from ontospan import Actor, ReviewResolution
+
+resolution = ReviewResolution(
+    outcome="uncertain",
+    reviewer=Actor(actor_id="reviewer-1", kind="human"),
+    note="The source evidence needs further review.",
+)
+flagged = annotation.model_copy(update={"review_resolution": resolution})
+```
+
+Use `schema_version="1.2.0"` for a unit containing this block. The only
+supported outcome is `uncertain`. It describes reviewer uncertainty; the
+clinical assertion axis may independently be `present`, `absent` or
+`uncertain`. Keep the source annotation's provenance and clinical axes;
+identify the reviewer in the block. Applications can link the source proposal
+through `provenance.source_refs`, and keep clinical justification in
+`provenance.notes`. A reviewer flag alone does not imply `adopted` or `edited`.
+
+The note is optional for faithful historical exports. Applications may require
+it for new decisions in their write services. Missing notes and missing
+resolution blocks are omitted on serialization. Unflagged 1.0/1.1 units
+therefore stay valid against their original frozen schemas. Unknown fields
+from newer minor versions remain preserved on read/write.
+
+`to_phenopacket()` and `to_phenopackets()` raise `ValueError` if any annotation
+contains a reviewer resolution, since the conversion cannot preserve it.
+`include_uncertain=True` applies only to clinical assertion uncertainty and
+does not override this refusal.
+
 ### References
 
 An annotation is referenced as `urn:ontospan:<annotation_set_id>:<annotation_id>`.
@@ -163,7 +197,7 @@ loaders check syntax without requiring those targets to be locally available.
   reject unknown major versions.
 - Every released minor version keeps its frozen schema files. A unit is
   checked against the schema of the version it declares.
-- Released: 1.0 and 1.1 (see `CHANGELOG.md`).
+- Released: 1.0, 1.1 and 1.2 (see `CHANGELOG.md`).
 
 ## Matching and agreement
 

@@ -2,8 +2,8 @@ import ontospan
 
 
 def test_the_package_states_its_version_and_schema_version() -> None:
-    assert ontospan.__version__ == "1.1.0"
-    assert ontospan.SCHEMA_VERSION == "1.1.0"
+    assert ontospan.__version__ == "1.2.0"
+    assert ontospan.SCHEMA_VERSION == "1.2.0"
 
 
 def test_the_public_api_is_importable_from_the_package() -> None:

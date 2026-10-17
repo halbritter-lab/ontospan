@@ -104,6 +104,14 @@ def _features(
     bundle_id: str | None,
     report: ExportReport,
 ) -> list[dict[str, Any]]:
+    # Refuse the whole conversion, including annotations that another filter
+    # would omit: Phenopackets cannot preserve reviewer resolution metadata.
+    for annotation in unit.annotation_set.annotations:
+        if annotation.review_resolution is not None:
+            raise ValueError(
+                "review_resolution cannot be represented in Phenopackets: "
+                f"{annotation_ref(unit.annotation_set.annotation_set_id, annotation.annotation_id)}"
+            )
     hpo_layers = {
         layer.layer_id
         for layer in unit.annotation_set.layers
@@ -211,7 +219,11 @@ def to_phenopacket(
     created_at: datetime | None = None,
     phenopacket_id: str | None = None,
 ) -> tuple[dict[str, Any], ExportReport]:
-    """One Phenopacket for one annotated document, from its hpo-phenotype layers."""
+    """One Phenopacket from hpo-phenotype layers.
+
+    Raises ValueError for reviewer resolution metadata, which cannot be
+    represented. ``include_uncertain`` only concerns clinical assertions.
+    """
     document = unit.document
     return _packet(
         phenopacket_id or document.document_id,
@@ -236,6 +248,7 @@ def to_phenopackets(
     """Packets for many units: one per subject_id if grouped, else one per unit.
 
     Units without ``subject_id`` always get a packet of their own.
+    Raises ValueError if any annotation carries reviewer resolution metadata.
     """
     created = _created(created_at)
     groups: dict[str, list[AnnotatedDocument]] = {}

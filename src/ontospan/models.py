@@ -11,6 +11,7 @@ major version.
 
 Format 1.1 adds the optional document fields ``case_id``, ``variant`` and
 ``translation`` and the optional manifest block ``release``.
+Format 1.2 adds optional annotation ``review_resolution`` metadata.
 """
 
 from __future__ import annotations
@@ -48,8 +49,8 @@ class _Model(BaseModel):
     model_config = ConfigDict(extra="allow", frozen=True)
 
 
-class _Omits1_1(_Model):
-    """Leaves out unset fields of format 1.1 when serializing.
+class _OmitsUnset(_Model):
+    """Leaves out absent optional fields added by minor format versions.
 
     A 1.0 unit or manifest is written again without them, so it still
     matches the closed schema of the version it declares.
@@ -117,7 +118,23 @@ class Provenance(_Model):
     notes: tuple[str, ...] = ()
 
 
-class Annotation(_Model):
+class ReviewResolution(_OmitsUnset):
+    """Reviewer uncertainty, independent of clinical axes and source provenance.
+
+    The optional note permits faithful historical exports. Applications may
+    require a note on new review decisions in their own write validation.
+    """
+
+    _omit_if_none = ("note",)
+
+    outcome: Literal["uncertain"]
+    reviewer: Actor
+    note: str | None = None
+
+
+class Annotation(_OmitsUnset):
+    _omit_if_none = ("review_resolution",)
+
     annotation_id: str = Field(min_length=1)
     layer_id: str = Field(min_length=1)
     term_id: str = Field(pattern=CURIE)
@@ -126,6 +143,7 @@ class Annotation(_Model):
     document_level: bool = False
     modifiers: tuple[Modifier, ...] = ()
     provenance: Provenance
+    review_resolution: ReviewResolution | None = None
 
 
 class OntologyResource(_Model):
@@ -182,7 +200,7 @@ class Translation(_Model):
     checks: tuple[TranslationCheck, ...] = ()
 
 
-class Document(_Omits1_1):
+class Document(_OmitsUnset):
     _omit_if_none = ("case_id", "variant", "translation")
 
     document_id: str = Field(min_length=1)
@@ -237,7 +255,7 @@ class ReleaseInfo(_Model):
     supersedes: tuple[SupersededRelease, ...] = ()
 
 
-class Manifest(_Omits1_1):
+class Manifest(_OmitsUnset):
     _omit_if_none = ("release",)
 
     schema_version: str = Field(default=SCHEMA_VERSION, pattern=VERSION)

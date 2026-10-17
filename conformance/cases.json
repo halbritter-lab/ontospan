@@ -2,6 +2,51 @@
   "cases": [
     {
       "artifact_type": "annotated_document",
+      "errors": [],
+      "file": "valid/review-resolution.json",
+      "hpo_profile_schema": true,
+      "warnings": [
+        "hierarchy_not_checked"
+      ]
+    },
+    {
+      "artifact_type": "annotated_document",
+      "errors": [],
+      "file": "valid/review-resolution-without-note.json",
+      "hpo_profile_schema": true,
+      "warnings": [
+        "hierarchy_not_checked"
+      ]
+    },
+    {
+      "artifact_type": "annotated_document",
+      "errors": [
+        "schema"
+      ],
+      "file": "invalid/review-resolution-outcome.json",
+      "hpo_profile_schema": null,
+      "warnings": []
+    },
+    {
+      "artifact_type": "annotated_document",
+      "errors": [
+        "schema"
+      ],
+      "file": "invalid/review-resolution-reviewer.json",
+      "hpo_profile_schema": null,
+      "warnings": []
+    },
+    {
+      "artifact_type": "annotated_document",
+      "errors": [
+        "schema"
+      ],
+      "file": "invalid/review-resolution-unknown-field.json",
+      "hpo_profile_schema": null,
+      "warnings": []
+    },
+    {
+      "artifact_type": "annotated_document",
       "errors": [
         "schema"
       ],
@@ -233,6 +278,15 @@
       "artifact_type": "annotated_document",
       "errors": [],
       "file": "valid/format-1-0.json",
+      "hpo_profile_schema": true,
+      "warnings": [
+        "hierarchy_not_checked"
+      ]
+    },
+    {
+      "artifact_type": "annotated_document",
+      "errors": [],
+      "file": "valid/format-1-1.json",
       "hpo_profile_schema": true,
       "warnings": [
         "hierarchy_not_checked"

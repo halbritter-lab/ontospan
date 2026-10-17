@@ -31,12 +31,14 @@ from builders import (
 )
 
 from ontospan.models import (
+    Actor,
     AxisValue,
     FileEntry,
     Layer,
     Manifest,
     OntologyResource,
     ReleaseInfo,
+    ReviewResolution,
     Variant,
 )
 
@@ -48,11 +50,32 @@ Data = dict[str, Any]
 
 def _dump(item: Any) -> Data:
     data: Data = item.model_dump(mode="json")
+    # Keep the pre-1.2 conformance corpus stable as historical evidence.
+    data["schema_version"] = "1.1.0"
     return data
 
 
 def _sample() -> Data:
     return _dump(sample())
+
+
+def _review_resolution(*, note: str | None = "Source evidence needs review.") -> Data:
+    data = sample().model_dump(mode="json")
+    data["annotation_set"]["annotations"][1]["review_resolution"] = ReviewResolution(
+        outcome="uncertain",
+        reviewer=Actor(actor_id="reviewer-1", kind="human"),
+        note=note,
+    ).model_dump(mode="json")
+    return data
+
+
+def _invalid_review_resolution(change: Callable[[Data], None]) -> Callable[[], Data]:
+    def build() -> Data:
+        data = _review_resolution()
+        change(data["annotation_set"]["annotations"][1]["review_resolution"])
+        return data
+
+    return build
 
 
 def _discontinuous() -> Data:
@@ -78,7 +101,7 @@ def _generic_layer() -> Data:
 
 def _newer_minor() -> Data:
     data = _sample()
-    data["schema_version"] = "1.2.0"
+    data["schema_version"] = "1.3.0"
     data["annotation_set"]["relations"] = [{"from": "a1", "to": "a2"}]
     data["annotation_set"]["layers"].append(
         {
@@ -162,6 +185,31 @@ def _manifest_release_name_mismatch() -> Data:
 
 # name -> (builder, errors, warnings, valid under the hpo profile schema or None)
 CASES: dict[str, tuple[Callable[[], Data], list[str], list[str], bool | None]] = {
+    "valid/review-resolution": (_review_resolution, [], CHECKED, True),
+    "valid/review-resolution-without-note": (
+        lambda: _review_resolution(note=None),
+        [],
+        CHECKED,
+        True,
+    ),
+    "invalid/review-resolution-outcome": (
+        _invalid_review_resolution(lambda r: r.update(outcome="confirmed")),
+        ["schema"],
+        [],
+        None,
+    ),
+    "invalid/review-resolution-reviewer": (
+        _invalid_review_resolution(lambda r: r.pop("reviewer")),
+        ["schema"],
+        [],
+        None,
+    ),
+    "invalid/review-resolution-unknown-field": (
+        _invalid_review_resolution(lambda r: r.update(status="pending")),
+        ["schema"],
+        [],
+        None,
+    ),
     "invalid/document-missing-artifact-type": (
         _changed(lambda d: d.pop("artifact_type")),
         ["schema"],
@@ -282,6 +330,7 @@ CASES: dict[str, tuple[Callable[[], Data], list[str], list[str], bool | None]] =
         CHECKED,
         True,
     ),
+    "valid/format-1-1": (_sample, [], CHECKED, True),
     "valid/variant-translation": (
         lambda: _dump(translated_sample()),
         [],

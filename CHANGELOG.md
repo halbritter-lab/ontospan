@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.2.0
+
+Format 1.2 adds optional annotation reviewer resolution metadata. Frozen
+1.0/1.1 schemas and historical unit/bundle round trips are preserved.
+
+- Public `ReviewResolution` model and optional `Annotation.review_resolution`:
+  `outcome: "uncertain"`, `reviewer: Actor`, optional `note: str`.
+  Absent blocks and notes are omitted when serialized.
+- Clinical axes, original provenance, source references and clinical notes
+  remain independent of the reviewer block.
+- Phenopacket conversion raises `ValueError` for any annotation with a
+  reviewer resolution, including when `include_uncertain=True`; that option
+  continues to control clinical assertion uncertainty only.
+- Versioned 1.2 schemas and reviewer resolution conformance fixtures.
+
 ## 1.1.0
 
 Format 1.1 adds optional fields only. 1.0 units and bundles stay valid; the
