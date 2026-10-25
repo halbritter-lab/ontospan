@@ -95,7 +95,9 @@ filesystem failures such as a missing input file retain their normal exceptions.
   not a clinical modifier or frequency (`modifier_as_annotation`), and it lies
   under `allowed_roots` (`outside_allowed_roots`). Modifiers lie under
   *Clinical modifier* (`not_a_modifier`); *Frequency* modifiers only warn
-  (`cohort_frequency`).
+  (`cohort_frequency`). A modifier term appears once per annotation
+  (`duplicate_modifier`, checked without an ontology too); two or more
+  modifiers under *Severity* or under *Onset* warn (`exclusive_modifier_class`).
 - An ontology whose release differs from the layer's `ontology.version` gives
   the warning `ontology_release_mismatch`.
 - In a bundle, every file is listed with its SHA-256, set ids are unique, and

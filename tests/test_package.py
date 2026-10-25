@@ -2,7 +2,7 @@ import ontospan
 
 
 def test_the_package_states_its_version_and_schema_version() -> None:
-    assert ontospan.__version__ == "1.2.0"
+    assert ontospan.__version__ == "1.2.1"
     assert ontospan.SCHEMA_VERSION == "1.2.0"
 
 

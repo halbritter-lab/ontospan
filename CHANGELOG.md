@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.1
+
+Validation: `duplicate_modifier` (error) for a modifier term repeated on one
+annotation; `exclusive_modifier_class` (warning) for two or more modifiers
+under Severity HP:0012824 or Onset HP:0003674. No schema change.
+
 ## 1.2.0
 
 Format 1.2 adds optional annotation reviewer resolution metadata. Frozen

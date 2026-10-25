@@ -103,6 +103,40 @@ def test_modifiers_must_be_clinical_modifiers_and_frequency_only_warns(
     ]
 
 
+def test_a_modifier_term_twice_is_an_error_even_without_ontology() -> None:
+    modifiers = [(SEVERE, [(55, 62)]), (SEVERE, [])]
+    item = annotation("a1", SEIZURE, [(63, 76)], modifiers=modifiers)
+    assert codes(item, None) == [("error", "duplicate_modifier")]
+    ctx = Context(path="a", ontology=None, newer_minor=False)
+    [issue] = check_annotation(HPO_LAYER, item, ctx)
+    assert issue.path == "a.modifiers[1].term_id"
+
+
+def test_two_severities_or_two_onsets_only_warn(hp: ObographOntology) -> None:
+    modifiers = [
+        ("HP:0012824", []),  # Severity (the root counts as its class)
+        (SEVERE, []),
+        ("HP:0410280", []),  # Pediatric onset
+        ("HP:0003593", []),  # Infantile onset
+    ]
+    item = annotation("a1", SEIZURE, [(63, 76)], modifiers=modifiers)
+    assert codes(item, hp) == [
+        ("warning", "exclusive_modifier_class"),
+        ("warning", "exclusive_modifier_class"),
+    ]
+    ctx = Context(path="a", ontology=hp, newer_minor=False)
+    severity = check_annotation(HPO_LAYER, item, ctx)[0]
+    assert severity.path == "a.modifiers"
+    assert severity.message == "2 severity modifiers: ['HP:0012824', 'HP:0012828']"
+
+
+def test_one_severity_and_one_onset_do_not_warn(hp: ObographOntology) -> None:
+    item = annotation(
+        "a1", SEIZURE, [(63, 76)], modifiers=[(SEVERE, []), ("HP:0003593", [])]
+    )
+    assert codes(item, hp) == []
+
+
 def test_the_generic_profile_checks_terms_and_roots_only(hp: ObographOntology) -> None:
     layer = Layer(
         layer_id="any",

@@ -63,10 +63,18 @@ def check_annotation(layer: Layer, annotation: Annotation, ctx: Context) -> list
         add("missing_evidence", f"{path}.mentions", "no mentions: set document_level")
     if annotation.mentions and annotation.document_level:
         add("document_level_with_mentions", f"{path}.document_level", "has mentions")
+    seen: set[str] = set()
     for index, modifier in enumerate(annotation.modifiers):
+        where = f"{path}.modifiers[{index}].term_id"
         if not _HPO_ID.match(modifier.term_id):
-            where = f"{path}.modifiers[{index}].term_id"
             add("not_an_hpo_id", where, f"{modifier.term_id!r} is not an HPO id")
+        if modifier.term_id in seen:
+            add(
+                "duplicate_modifier",
+                where,
+                f"{modifier.term_id} is already a modifier of this annotation",
+            )
+        seen.add(modifier.term_id)
 
     ontology = ctx.ontology
     if ontology is None:
@@ -99,4 +107,19 @@ def check_annotation(layer: Layer, annotation: Annotation, ctx: Context) -> list
             )
         elif not is_under(ontology, modifier.term_id, CLINICAL_MODIFIER):
             add("not_a_modifier", where, f"{modifier.term_id} is no clinical modifier")
+    for root, name in ((SEVERITY, "severity"), (ONSET, "onset")):
+        under = sorted(
+            {
+                m.term_id
+                for m in annotation.modifiers
+                if ontology.is_active(m.term_id) and is_under(ontology, m.term_id, root)
+            }
+        )
+        if len(under) > 1:
+            add(
+                "exclusive_modifier_class",
+                f"{path}.modifiers",
+                f"{len(under)} {name} modifiers: {under}",
+                "warning",
+            )
     return issues
