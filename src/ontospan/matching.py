@@ -1,6 +1,6 @@
 """Comparing two annotation sets of the same canonical text (T1 F11).
 
-This is the single implementation that Ontocurator (merge, live agreement)
+This is the single implementation that Ontotator (merge, live agreement)
 and the benchmark share.
 
 - Annotations are only paired within the same layer.

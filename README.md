@@ -1,7 +1,7 @@
 # ontospan
 
 Shared format for ontology concept annotations on text spans, used by
-Ontocurator, Phentrieve and phentrieve-benchmark.
+Ontotator, Phentrieve and phentrieve-benchmark.
 
 - Canonical text (NFC, LF, no BOM) with Unicode codepoint offsets.
 - One annotated document = one text + one annotation set; bundles group them.
