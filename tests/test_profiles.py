@@ -70,12 +70,14 @@ def test_without_mentions_an_annotation_must_be_document_level() -> None:
     ]
 
 
-def test_terms_must_be_active_hpo_terms_and_not_modifiers(hp: ObographOntology) -> None:
+def test_terms_must_be_active_and_modifier_terms_only_warn(
+    hp: ObographOntology,
+) -> None:
     assert codes(annotation("a1", "HP:0000057", [(6, 19)]), hp) == [
         ("error", "unknown_term")
     ]
     assert codes(annotation("a2", SEVERE, [(55, 62)]), hp) == [
-        ("error", "modifier_as_annotation")
+        ("warning", "modifier_as_annotation")
     ]
     assert codes(annotation("a3", "MONDO:0005027", [(63, 76)]), hp) == [
         ("error", "not_an_hpo_id"),
@@ -90,6 +92,11 @@ def test_history_terms_are_allowed_unless_the_project_restricts_roots(
     assert codes(history, hp) == []
     restricted = HPO_LAYER.model_copy(update={"allowed_roots": ("HP:0000118",)})
     assert codes(history, hp, layer=restricted) == [("error", "outside_allowed_roots")]
+    modifier_term = annotation("a2", SEVERE, [(55, 62)])
+    assert codes(modifier_term, hp, layer=restricted) == [
+        ("warning", "modifier_as_annotation"),
+        ("error", "outside_allowed_roots"),
+    ]
 
 
 def test_modifiers_must_be_clinical_modifiers_and_frequency_only_warns(

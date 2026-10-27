@@ -91,9 +91,11 @@ filesystem failures such as a missing input file retain their normal exceptions.
   declared layer (`unknown_layer`). Annotation ids are unique within a set
   (`duplicate_annotation`).
 - `source_refs` use the reference syntax below (`source_ref_syntax`).
-- Ontology rules of `hpo-phenotype`: the term is active (`unknown_term`). It is
-  not a clinical modifier or frequency (`modifier_as_annotation`), and it lies
-  under `allowed_roots` (`outside_allowed_roots`). Modifiers lie under
+- Ontology rules of `hpo-phenotype`: the term is active (`unknown_term`) and
+  lies under `allowed_roots` (`outside_allowed_roots`). A clinical modifier or
+  frequency term as the annotation's own term only warns
+  (`modifier_as_annotation`): some of them name findings (*Stillbirth*), and
+  the annotation guideline decides. Modifiers lie under
   *Clinical modifier* (`not_a_modifier`); *Frequency* modifiers only warn
   (`cohort_frequency`). A modifier term appears once per annotation
   (`duplicate_modifier`, checked without an ontology too); two or more

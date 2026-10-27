@@ -82,18 +82,20 @@ def check_annotation(layer: Layer, annotation: Annotation, ctx: Context) -> list
     where = f"{path}.term_id"
     if not ontology.is_active(term):
         add("unknown_term", where, f"{term} is not an active HPO term")
-    elif is_under(ontology, term, CLINICAL_MODIFIER) or is_under(
-        ontology, term, FREQUENCY
-    ):
-        add("modifier_as_annotation", where, f"{term} is a modifier")
-    elif layer.allowed_roots and not any(
-        is_under(ontology, term, root) for root in layer.allowed_roots
-    ):
-        add(
-            "outside_allowed_roots",
-            where,
-            f"{term} not under {list(layer.allowed_roots)}",
-        )
+    else:
+        if is_under(ontology, term, CLINICAL_MODIFIER) or is_under(
+            ontology, term, FREQUENCY
+        ):
+            # only a warning: some modifier terms name findings (Stillbirth)
+            add("modifier_as_annotation", where, f"{term} is a modifier", "warning")
+        if layer.allowed_roots and not any(
+            is_under(ontology, term, root) for root in layer.allowed_roots
+        ):
+            add(
+                "outside_allowed_roots",
+                where,
+                f"{term} not under {list(layer.allowed_roots)}",
+            )
     for index, modifier in enumerate(annotation.modifiers):
         where = f"{path}.modifiers[{index}].term_id"
         if not ontology.is_active(modifier.term_id):
