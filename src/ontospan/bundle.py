@@ -11,6 +11,7 @@ import json
 import lzma
 import zipfile
 import zlib
+from collections import Counter
 from collections.abc import Mapping, Sequence
 from contextlib import suppress
 from datetime import datetime
@@ -41,6 +42,8 @@ from ontospan.validate import (
 
 MANIFEST = "manifest.json"
 MAX_TOTAL_BYTES = 512 * 1024 * 1024
+# A ZIP of many tiny entries costs time per entry, not bytes.
+MAX_ENTRIES = 10_000
 # The first format version with the manifest ``release`` block.
 RELEASE_BLOCK_VERSION = "1.1.0"
 
@@ -186,8 +189,11 @@ def _read_directory(source: Path, report: ValidationReport) -> dict[str, bytes]:
 def _read_zip(source: Path, report: ValidationReport) -> dict[str, bytes]:
     with zipfile.ZipFile(source) as archive:
         infos = [info for info in archive.infolist() if not info.is_dir()]
-        names = [info.filename for info in infos]
-        for name in sorted({name for name in names if names.count(name) > 1}):
+        if len(infos) > MAX_ENTRIES:
+            report.add("error", "too_large", str(source), "bundle has too many entries")
+            return {}
+        counts = Counter(info.filename for info in infos)
+        for name in sorted(name for name, count in counts.items() if count > 1):
             report.add(
                 "error", "duplicate_entry", name, "the ZIP holds this name twice"
             )

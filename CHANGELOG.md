@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+ZIP bundles with more than 10,000 entries (`MAX_ENTRIES`) are refused as
+`too_large` before any entry is read; the duplicate-entry check is linear.
+
 ## 1.2.1
 
 Validation: `duplicate_modifier` (error) for a modifier term repeated on one
