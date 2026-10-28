@@ -225,3 +225,15 @@ loaders check syntax without requiring those targets to be locally available.
 Bundle files are hashed byte for byte. Check them in with
 `*.json text eol=lf` in `.gitattributes`. Otherwise a Windows checkout with
 `core.autocrlf=true` changes them, and readers report `crlf_checkout`.
+
+## License
+
+ontospan is released under the [MIT License](LICENSE).
+
+The test fixture `tests/fixtures/hp-mini.json` is a small excerpt of the
+[Human Phenotype Ontology](https://hpo.jax.org/) (HPO), release 2026-06-23.
+It keeps a few term IDs, labels, `is_a` relations and one deprecation flag;
+the term content is not altered. The HPO is provided by the HPO team under
+its own license terms (<https://hpo.jax.org/license>). Please cite the HPO
+and state the release version when you use its data. The MIT License does not
+cover HPO content.
