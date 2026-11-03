@@ -2,9 +2,6 @@
 
 ## Unreleased
 
-ZIP bundles with more than 10,000 entries (`MAX_ENTRIES`) are refused as
-`too_large` before any entry is read; the duplicate-entry check is linear.
-
 `agreement(..., ontology)` adds `related` (paired term conflicts between an
 ancestor and its descendant with equal axes) and `annotation_hierarchical_f1`;
 both are None without an ontology (#7).
@@ -12,6 +9,15 @@ both are None without an ontology (#7).
 BioC JSON/XML (`to_bioc_json`, `to_bioc_xml`) and brat (`to_brat`, `BratFiles`)
 exports with a `ConversionReport`; codepoint offsets, document-level
 annotations as BioC relations without nodes, dropped and listed in brat (#6).
+
+## 1.2.2
+
+`hpo-phenotype` validation: `modifier_as_annotation` (a modifier term used as
+an annotation's own term, for example Stillbirth) is now a warning instead of
+an error, and no longer hides the `outside_allowed_roots` check for that term.
+
+ZIP bundles with more than 10,000 entries (`MAX_ENTRIES`) are refused as
+`too_large` before any entry is read; the duplicate-entry check is linear.
 
 ## 1.2.1
 
