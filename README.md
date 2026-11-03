@@ -14,6 +14,7 @@ Ontotator, Phentrieve and phentrieve-benchmark.
 - Matching and agreement rules shared by every tool.
 - Phenopacket v2 export (`pip install ontospan[phenopacket]` adds parsing
   into the official classes).
+- BioC (JSON and XML) and brat standoff export, without extra dependencies.
 
 ## Usage
 
@@ -55,6 +56,33 @@ annotation set per document first, for example the adjudicated or release set.
 Grouping rejects alternate sets of the same document. Exports reject conflicting
 HPO releases in one packet and a supplied ontology whose release differs from
 the layer release, rather than emitting ambiguous resources or foreign labels.
+
+### BioC and brat
+
+`to_bioc_json(units)`, `to_bioc_xml(units)` and `to_brat(unit)` are derived,
+lossy exports like the Phenopacket export. Each returns the output and a
+`ConversionReport` of what was dropped or approximated. The output is
+deterministic: annotations in text order, then layer and id. An optional
+ontology adds labels.
+
+- Offsets stay Unicode codepoints of the canonical text. brat counts
+  codepoints of its `.txt` too. BioC tools differ (some count UTF-8 bytes), so
+  the collection states `offset_unit: codepoint` in its infons.
+- BioC: one document per annotated document (alternative sets of one document
+  get `urn:ontospan:document:<document>:<set>`), one passage with the full
+  text, one annotation per mention with one location per segment. Infons hold
+  `identifier` (term), `type` (layer), axes, modifiers, provenance, reviewer
+  resolution and `annotation_ref`. A BioC annotation needs a location, so
+  document-level annotations become document relations without nodes, with
+  the same infons and `document_level: true`.
+- brat: `to_brat()` returns `BratFiles(txt, ann)`. One entity `T` per
+  mention, typed by the layer id, with `start end;start end` fragments for
+  discontinuous mentions (split at line breaks, which a fragment cannot
+  cross). The term is a normalization `N` (`Reference T1 HP:0001250`), axes
+  are attributes `A`, and an annotator note `#` keeps the reference,
+  modifiers, provenance and reviewer resolution. brat cannot hold
+  document-level annotations; they are listed in `report.dropped`.
+- Both drop cue segments and modifier segments and keep the modifier terms.
 
 ## Binding contract
 
