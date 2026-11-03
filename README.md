@@ -222,6 +222,14 @@ loaders check syntax without requiring those targets to be locally available.
 
   It also reports modifier agreement and the counts needed for
   micro-averaging.
+- Hierarchy-aware agreement: `agreement(a, b, text, ontology)` adds
+  `related`, the paired term conflicts (overlapping or identical evidence)
+  whose terms are ancestor and descendant (`is_a`, transitive) and whose axes
+  are equal, and `annotation_hierarchical_f1`, the tolerant annotation F1 in
+  which related pairs count as matches:
+  `2 * (equal + compatible + related) / (n_a + n_b)`. The pairing is the same
+  as without an ontology. Without one, both fields are `None` and every other
+  value is unchanged.
 
 ## Bundles in Git
 

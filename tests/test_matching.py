@@ -1,3 +1,4 @@
+import dataclasses
 from typing import Any
 
 import pytest
@@ -216,3 +217,50 @@ def test_term_counts_for_microaveraging_count_distinct_labels() -> None:
     assert result.term_f1 == 0.5
     empty = agreement([], [], T)
     assert (empty.terms_a, empty.terms_b, empty.terms_equal) == (0, 0, 0)
+
+
+def test_hierarchical_agreement_counts_parent_and_child_as_related() -> None:
+    hp = ObographOntology.load(FIXTURES / "hp-mini.json")
+    left = [a("a1", SEIZURE, (19, 32)), a("a2", HYPOTONIA, (0, 9))]
+    right = [a("b1", DIALEPTIC, (11, 32)), a("b2", HYPOTONIA, (0, 10))]
+    result = agreement(left, right, T, hp)
+    assert (result.term_conflicts, result.related) == (1, 1)
+    assert result.annotation_tolerant_f1 == pytest.approx(2 * 1 / 4)
+    assert result.annotation_hierarchical_f1 == 1.0
+    # The relation is transitive and symmetric: grandparent against child.
+    nervous = [a("b1", "HP:0000707", (19, 32))]
+    assert agreement(nervous, [a("a1", DIALEPTIC, (19, 32))], T, hp).related == 1
+
+
+def test_hierarchical_agreement_ignores_unrelated_terms_and_other_axes() -> None:
+    hp = ObographOntology.load(FIXTURES / "hp-mini.json")
+    unrelated = agreement(
+        [a("a1", SEIZURE, (19, 32))], [a("b1", FEVER, (19, 32))], T, hp
+    )
+    assert (unrelated.term_conflicts, unrelated.related) == (1, 0)
+    assert unrelated.annotation_hierarchical_f1 == 0.0
+    other_axes = agreement(
+        [a("a1", SEIZURE, (19, 32))],
+        [a("b1", DIALEPTIC, (19, 32), axes_=axes("absent"))],
+        T,
+        hp,
+    )
+    assert (other_axes.related, other_axes.annotation_hierarchical_f1) == (0, 0.0)
+    disjoint = agreement(
+        [a("a1", SEIZURE, (19, 32))], [a("b1", DIALEPTIC, (37, 43))], T, hp
+    )
+    assert (disjoint.related, disjoint.annotation_hierarchical_f1) == (0, 0.0)
+    assert agreement([], [], T, hp).annotation_hierarchical_f1 == 1.0
+
+
+def test_without_an_ontology_hierarchical_fields_are_none_and_nothing_changes() -> None:
+    hp = ObographOntology.load(FIXTURES / "hp-mini.json")
+    left = [a("a1", SEIZURE, (19, 32)), a("a2", FEVER, (37, 43))]
+    right = [a("b1", DIALEPTIC, (19, 32)), a("b2", FEVER, (36, 44))]
+    without = agreement(left, right, T)
+    assert (without.related, without.annotation_hierarchical_f1) == (None, None)
+    with_hp = agreement(left, right, T, hp)
+    assert (
+        dataclasses.replace(with_hp, related=None, annotation_hierarchical_f1=None)
+        == without
+    )
