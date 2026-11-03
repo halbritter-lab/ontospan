@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 1.2.2
+
+`hpo-phenotype` validation: `modifier_as_annotation` (a modifier term used as
+an annotation's own term, for example Stillbirth) is now a warning instead of
+an error, and no longer hides the `outside_allowed_roots` check for that term.
+
 ZIP bundles with more than 10,000 entries (`MAX_ENTRIES`) are refused as
 `too_large` before any entry is read; the duplicate-entry check is linear.
 
