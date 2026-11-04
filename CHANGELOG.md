@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+`agreement(..., ontology)` adds `related` (paired term conflicts between an
+ancestor and its descendant with equal axes) and `annotation_hierarchical_f1`;
+both are None without an ontology (#7).
+
 ZIP bundles with more than 10,000 entries (`MAX_ENTRIES`) are refused as
 `too_large` before any entry is read; the duplicate-entry check is linear.
 
