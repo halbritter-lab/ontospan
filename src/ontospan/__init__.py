@@ -1,6 +1,9 @@
 """ontospan: a shared format for ontology concept annotations on text spans."""
 
+from ontospan._interchange import ConversionReport
 from ontospan._version import SCHEMA_VERSION, __version__
+from ontospan.bioc import to_bioc_json, to_bioc_xml
+from ontospan.brat import BratFiles, to_brat
 from ontospan.bundle import read_bundle, write_bundle
 from ontospan.matching import Agreement, MatchGroup, agreement, match_annotations
 from ontospan.models import (
@@ -50,7 +53,9 @@ __all__ = [
     "AnnotationRef",
     "AnnotationSet",
     "AxisValue",
+    "BratFiles",
     "Contributor",
+    "ConversionReport",
     "Document",
     "ExportReport",
     "FormatError",
@@ -92,6 +97,9 @@ __all__ = [
     "segments_flat",
     "spanning_segment",
     "text_sha256",
+    "to_bioc_json",
+    "to_bioc_xml",
+    "to_brat",
     "to_phenopacket",
     "to_phenopackets",
     "validate",
