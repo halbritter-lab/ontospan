@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use ontospan, please cite it using these metadata."
+title: ontospan
+abstract: Shared format for ontology concept annotations on text spans, with validation, an HPO profile, matching and Phenopacket export.
+type: software
+license: MIT
+repository-code: https://github.com/halbritter-lab/ontospan
+keywords:
+  - Human Phenotype Ontology
+  - text annotation
+  - clinical NLP
+authors:
+  - family-names: Lerch
+    given-names: Jan-Paul
